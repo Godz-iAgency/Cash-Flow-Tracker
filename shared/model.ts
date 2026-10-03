@@ -1,3 +1,4 @@
+import type { DailyCheckIn, FinancialAction, LeakReview } from './actions';
 export type Scope = 'Personal' | 'Business';
 export type TransactionType = 'Expense' | 'Income' | 'Transfer';
 export type Classification = 'Need' | 'Want' | '';
@@ -23,6 +24,7 @@ export interface Audit { id: string; entity: string; entityId: string; at: strin
 export interface State {
   accounts: Account[]; categories: Category[]; budgets: Budget[];
   income: PlannedIncome[]; transactions: Transaction[]; audit: Audit[];
+  notesReminders: FinancialAction[]; dailyCheckIns: DailyCheckIn[]; leakReviews: LeakReview[];
 }
 export const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 export function parseCents(input: string): number {

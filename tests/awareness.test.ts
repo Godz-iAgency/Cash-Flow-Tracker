@@ -1,0 +1,98 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { initialState } from '../shared/seed';
+import { localDate, money, validateTransaction } from '../shared/model';
+import { actionSummary, dueActions, extendState, transactionFingerprint, validateAction, validateCheckIn } from '../shared/actions';
+import { axioms, dailyAxiom } from '../shared/axioms';
+import { detectLeaks } from '../shared/leaks';
+const actionDraft = (overrides: Record<string, unknown> = {}) => ({ id: 'action-1', title: 'Review Spectrum bill', note: 'Call to review the amount.', category: 'Bill Review', priority: 'High', status: 'Open', scope: 'Personal', relatedExpenseId: 'budget:budget-8', relatedAccountId: 'capital-one-checking', reminderDate: '2026-10-03', amountAffectedCents: 9000, previousCostCents: 9000, newCostCents: 7000, monthlySavingsCents: null, ...overrides });
+const transaction = (id: string, date: string, amountCents: number, overrides: Record<string, unknown> = {}) => validateTransaction({ id, date, time: '12:00', type: 'Expense', amountCents, merchant: 'Spectrum', description: '', category: 'Utilities', subcategory: 'Internet', accountId: 'capital-one-checking', toAccountId: '', classification: 'Need', notes: '', ...overrides }, initialState());
+test('legacy data gains new collections without changing financial records', () => {
+  const original = initialState(); original.transactions = [transaction('existing', '2026-10-03', 10)];
+  const { notesReminders, dailyCheckIns, leakReviews, ...legacy } = original;
+  const migrated = extendState(legacy);
+  assert.deepEqual(migrated.transactions, original.transactions); assert.equal(migrated.accounts, original.accounts);
+  assert.deepEqual(migrated.notesReminders, []); assert.deepEqual(migrated.dailyCheckIns, []); assert.deepEqual(migrated.leakReviews, []);
+  assert.throws(() => extendState({ ...legacy, notesReminders: 'corrupt' }));
+});
+test('actions derive cent-exact savings and preserve completed records and dates', () => {
+  const state = initialState(), before = validateAction(actionDraft({ monthlySavingsCents: 999999, annualizedSavingsCents: 999999 }), state);
+  assert.equal(before.monthlySavingsCents, 2000); assert.equal(before.annualizedSavingsCents, 24000); assert.equal(before.completedAt, null);
+  state.notesReminders = [before];
+  const completed = validateAction({ ...before, status: 'Completed' }, state, before);
+  assert.ok(completed.completedAt); assert.equal(completed.createdAt, before.createdAt); assert.equal(completed.revision, 2);
+  state.notesReminders = [completed];
+  const edited = validateAction({ ...completed, note: 'Confirmed with provider.' }, state, completed);
+  assert.equal(edited.completedAt, completed.completedAt);
+  assert.deepEqual(actionSummary(state, 'Personal'), { open: 0, inProgress: 0, high: 0, affected: 0, monthlySavings: 2000, annualizedSavings: 24000 });
+  assert.equal(actionSummary(state, 'Business').monthlySavings, 0);
+  const reopened = validateAction({ ...completed, status: 'Open' }, state, completed);
+  assert.equal(reopened.completedAt, null); assert.ok(completed.completedAt);
+  assert.throws(() => validateAction({ ...completed, revision: 1 }, state, completed), /changed/);
+});
+test('optional money stays unknown, zero costs and increases remain explicit', () => {
+  const state = initialState();
+  const blank = validateAction(actionDraft({ amountAffectedCents: null, previousCostCents: null, newCostCents: null }), state);
+  assert.equal(blank.amountAffectedCents, null); assert.equal(blank.monthlySavingsCents, null); assert.equal(blank.annualizedSavingsCents, null);
+  const cancelled = validateAction(actionDraft({ newCostCents: 0 }), state);
+  assert.equal(cancelled.monthlySavingsCents, 9000);
+  const increase = validateAction(actionDraft({ newCostCents: 10000 }), state);
+  assert.equal(increase.monthlySavingsCents, -1000); assert.equal(increase.annualizedSavingsCents, -12000);
+  const manual = validateAction(actionDraft({ previousCostCents: null, newCostCents: null, monthlySavingsCents: 10 }), state);
+  assert.equal(manual.annualizedSavingsCents, 120);
+  for (const invalid of [{ title: '' }, { reminderDate: '2026-02-30' }, { previousCostCents: 1.5 }, { amountAffectedCents: -1 }, { status: 'Deleted' }, { scope: 'Business' }, { relatedExpenseId: 'transaction:missing' }]) assert.throws(() => validateAction(actionDraft(invalid), state));
+});
+test('upcoming reminders include overdue and high priority, exclude completed and other scopes', () => {
+  const state = initialState();
+  state.notesReminders = [validateAction(actionDraft(), state), validateAction(actionDraft({ id: 'future', reminderDate: '2026-11-01', priority: 'Low' }), state), validateAction(actionDraft({ id: 'complete', status: 'Completed' }), state)];
+  assert.deepEqual(dueActions(state, 'Personal', '2026-10-03').map(a => a.id), ['action-1']);
+  assert.deepEqual(dueActions(state, 'Business', '2026-10-03'), []);
+});
+test('check-ins are per day and scope, include transfers, and become stale on additions or edits', () => {
+  const state = initialState(), date = '2026-10-03';
+  state.transactions = [transaction('expense', date, 10), transaction('transfer', date, 10000, { type: 'Transfer', toAccountId: 'chase-savings' })];
+  const payload = { date, scope: 'Personal', revision: 0, transactionFingerprint: transactionFingerprint(state, date, 'Personal') };
+  const checkIn = validateCheckIn(payload, state); state.dailyCheckIns = [checkIn];
+  assert.equal(checkIn.id, '2026-10-03-Personal');
+  assert.notEqual(transactionFingerprint(state, date, 'Personal'), transactionFingerprint(state, date, 'Business'));
+  state.transactions.push(transaction('new-expense', date, 20));
+  assert.notEqual(checkIn.transactionFingerprint, transactionFingerprint(state, date, 'Personal'));
+  assert.throws(() => validateCheckIn({ ...payload, revision: 1 }, state), /changed/);
+  const rechecked = validateCheckIn({ ...payload, revision: 1, transactionFingerprint: transactionFingerprint(state, date, 'Personal') }, state);
+  assert.equal(rechecked.revision, 2);
+  state.transactions[0] = { ...state.transactions[0], revision: 2 };
+  assert.notEqual(rechecked.transactionFingerprint, transactionFingerprint(state, date, 'Personal'));
+});
+test('bill comparisons require all three prior months and never mix business with personal', () => {
+  const state = initialState();
+  state.transactions = [transaction('jul', '2026-07-01', 7000), transaction('aug', '2026-08-01', 7000), transaction('sep', '2026-09-01', 7000), transaction('oct', '2026-10-01', 9200), transaction('business', '2026-10-02', 99999, { accountId: 'chase-savings' })];
+  const leak = detectLeaks(state, '2026-10', 'Personal').find(l => l.title === 'Recurring cost increased')!;
+  assert.match(leak.message, /\$70\.00/); assert.match(leak.message, /\$92\.00/); assert.equal(leak.amountAffectedCents, 2200);
+  assert.equal(leak.transactions.length, 4); assert.equal(detectLeaks(state, '2026-10', 'Business').length, 0);
+  state.leakReviews.push({ id: leak.id, month: '2026-10', dismissedAt: new Date().toISOString() });
+  assert.ok(!detectLeaks(state, '2026-10', 'Personal').some(l => l.id === leak.id));
+  state.transactions[3] = { ...state.transactions[3], revision: 2, amountCents: 9300 };
+  assert.ok(detectLeaks(state, '2026-10', 'Personal').some(l => l.title === 'Recurring cost increased'));
+  state.transactions = state.transactions.filter(t => t.id !== 'jul');
+  assert.ok(!detectLeaks(state, '2026-10', 'Personal').some(l => l.title === 'Recurring cost increased'));
+});
+test('flags exact repeats, changing service amounts, small wants, and unplanned recurring charges', () => {
+  const state = initialState();
+  state.transactions = [transaction('sub1', '2026-10-01', 1700, { category: 'Subscriptions / AI', subcategory: 'YouTube', merchant: 'YouTube' }), transaction('sub2', '2026-10-02', 1700, { category: 'Subscriptions / AI', subcategory: 'YouTube', merchant: ' youtube ' }), transaction('bill1', '2026-10-01', 7000), transaction('bill2', '2026-10-02', 9200), ...Array.from({ length: 100 }, (_, i) => transaction(`small-${i}`, '2026-10-03', 10, { merchant: 'Coffee', category: 'Food', subcategory: '', classification: 'Want' })), ...['2026-08-01', '2026-09-01', '2026-10-01'].map((date, i) => transaction(`unplanned-${i}`, date, 500, { merchant: 'Unexpected service', subcategory: '' }))];
+  const leaks = detectLeaks(state, '2026-10', 'Personal');
+  assert.ok(leaks.some(l => l.title === 'Repeated subscription charges'));
+  assert.ok(leaks.some(l => l.title === 'Different charges for the same service'));
+  assert.ok(leaks.some(l => l.title === 'Recurring spending outside the plan'));
+  const small = leaks.find(l => l.title === 'Repeated small discretionary purchases')!;
+  assert.match(small.message, /100 want purchases/); assert.equal(small.amountAffectedCents, 1000); assert.ok(small.id.length < 100);
+  const transfer = transaction('exclude-transfer', '2026-10-03', 99999, { type: 'Transfer', toAccountId: 'capital-one-savings' });
+  const ids = leaks.map(l => l.id); state.transactions.push(transfer); assert.deepEqual(detectLeaks(state, '2026-10', 'Personal').map(l => l.id), ids);
+});
+test('axioms cover all 28 topics and rotate by local calendar date without changing within a day', () => {
+  assert.equal(axioms.length, 28);
+  assert.equal(new Set(axioms.map(a => a.topic)).size, 28);
+  assert.equal(dailyAxiom('2026-10-03'), dailyAxiom('2026-10-03'));
+  assert.notEqual(dailyAxiom('2026-10-03'), dailyAxiom('2026-10-04'));
+  assert.equal(dailyAxiom('2026-10-03'), dailyAxiom('2026-10-31'));
+  assert.ok(axioms.every(a => a.axiom && a.lesson && a.question.endsWith('?')));
+});

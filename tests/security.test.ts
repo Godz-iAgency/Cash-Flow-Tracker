@@ -21,6 +21,9 @@ test('private Sheets endpoints require authentication and reject cross-origin wr
     });
     const root = `http://127.0.0.1:${port}/api/`;
     assert.equal((await fetch(`${root}state`)).status, 401);
+    for (const endpoint of ['actions', 'check-ins', 'leak-reviews']) {
+      assert.equal((await fetch(root + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 401);
+    }
     const invalid = await fetch(`${root}login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: 'wrong' }) });
     assert.equal(invalid.status, 401);
     const cross = await fetch(`${root}login`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://untrusted.example' }, body: JSON.stringify({ password: 'test-password-only' }) });

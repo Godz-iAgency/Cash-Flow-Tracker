@@ -10,8 +10,14 @@ const headers: Record<Table, string[]> = {
   income: ['id', 'label', 'amountCents', 'scope', 'month'],
   transactions: ['id', 'date', 'time', 'type', 'amountCents', 'category', 'subcategory', 'merchant', 'description', 'accountId', 'toAccountId', 'scope', 'classification', 'notes', 'createdAt', 'updatedAt', 'revision'],
   audit: ['id', 'entity', 'entityId', 'at', 'before', 'after'],
+  notesReminders: ['id', 'title', 'note', 'category', 'relatedExpenseId', 'relatedAccountId', 'scope', 'priority', 'status', 'reminderDate', 'amountAffectedCents', 'previousCostCents', 'newCostCents', 'monthlySavingsCents', 'annualizedSavingsCents', 'createdAt', 'completedAt', 'updatedAt', 'revision'],
+  dailyCheckIns: ['id', 'date', 'scope', 'confirmedAt', 'transactionFingerprint', 'revision'],
+  leakReviews: ['id', 'month', 'dismissedAt'],
 };
 const names = Object.keys(headers) as Table[];
+const sheetName = (table: Table) => ({ notesReminders: 'Notes_Reminders', dailyCheckIns: 'Daily_Checkins', leakReviews: 'Leak_Reviews' } as Partial<Record<Table, string>>)[table] ?? table;
+const columnName = (table: Table, name: string) => table === 'notesReminders' || table === 'dailyCheckIns' || table === 'leakReviews' ? name.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`) : name;
+const sheetHeaders = (table: Table) => headers[table].map(name => columnName(table, name));
 let ids: Partial<Record<Table, number>> = {};
 let initialized: Promise<void> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
@@ -40,22 +46,23 @@ function append(table: Table, records: unknown[]) {
 async function initialize() {
   const meta = await request('?fields=sheets.properties');
   for (const sheet of meta.sheets ?? []) {
-    if (names.includes(sheet.properties.title)) ids[sheet.properties.title as Table] = sheet.properties.sheetId;
+    const table = names.find(table => sheetName(table) === sheet.properties.title);
+    if (table) ids[table] = sheet.properties.sheetId;
   }
   const missing = names.filter(n => ids[n] === undefined);
   if (missing.length) {
-    const result = await request(':batchUpdate', { requests: missing.map(title => ({ addSheet: { properties: { title, gridProperties: { frozenRowCount: 1 } } } })) });
-    result.replies.forEach((reply: any) => { ids[reply.addSheet.properties.title as Table] = reply.addSheet.properties.sheetId; });
+    const result = await request(':batchUpdate', { requests: missing.map(table => ({ addSheet: { properties: { title: sheetName(table), gridProperties: { frozenRowCount: 1 } } } })) });
+    result.replies.forEach((reply: any) => { const table = names.find(table => sheetName(table) === reply.addSheet.properties.title)!; ids[table] = reply.addSheet.properties.sheetId; });
   }
   const seed = initialState();
-  const ranges = names.map(n => `ranges=${encodeURIComponent(`${n}!A1:Z1`)}`).join('&');
+  const ranges = names.map(n => `ranges=${encodeURIComponent(`${sheetName(n)}!A1:Z1`)}`).join('&');
   const existing = await request(`/values:batchGet?${ranges}`);
   const writes: unknown[] = [];
   names.forEach((table, i) => {
     const row = existing.valueRanges[i]?.values?.[0] ?? [];
-    if (row.length && row.join('|') !== headers[table].join('|')) throw new Error(`The ${table} sheet has an incompatible header. Use a separate empty spreadsheet; existing data has not been overwritten.`);
+    if (row.length && row.join('|') !== sheetHeaders(table).join('|')) throw new Error(`The ${table} sheet has an incompatible header. Use a separate empty spreadsheet; existing data has not been overwritten.`);
     if (!row.length) {
-      writes.push({ appendCells: { sheetId: ids[table], fields: 'userEnteredValue', rows: [cells(headers[table])] } });
+      writes.push({ appendCells: { sheetId: ids[table], fields: 'userEnteredValue', rows: [cells(sheetHeaders(table))] } });
       if (seed[table].length) writes.push(append(table, seed[table]));
     }
   });
@@ -68,7 +75,7 @@ async function ready() {
 }
 export async function readState(): Promise<State> {
   await ready();
-  const ranges = names.map(n => `ranges=${encodeURIComponent(`${n}!A2:Z`)}`).join('&');
+  const ranges = names.map(n => `ranges=${encodeURIComponent(`${sheetName(n)}!A2:Z`)}`).join('&');
   const data = await request(`/values:batchGet?${ranges}&valueRenderOption=UNFORMATTED_VALUE`);
   const state: Record<string, unknown[]> = {};
   names.forEach((table, i) => {
@@ -76,8 +83,8 @@ export async function readState(): Promise<State> {
     const records = rows.filter((row: unknown[]) => row[0]).map((row: unknown[]) => Object.fromEntries(headers[table].map((key, j) => {
       let value: unknown = row[j] ?? '';
       if (['amountCents', 'revision'].includes(key)) value = Number(value);
-      if (key === 'balanceCents') value = value === '' ? null : Number(value);
-      if (key === 'balanceUpdatedAt' && value === '') value = null;
+      if (key.endsWith('Cents') && key !== 'amountCents') value = value === '' ? null : Number(value);
+      if ((key === 'balanceUpdatedAt' || key === 'completedAt') && value === '') value = null;
       if (key === 'before' || key === 'after') value = value ? JSON.parse(String(value)) : null;
       return [key, value];
     })));

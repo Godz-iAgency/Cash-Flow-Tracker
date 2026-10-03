@@ -5,6 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { configured, mutate, readState, writeRecords } from './sheets';
 import { validateTransaction } from '../shared/model';
+import { validateAction, validateCheckIn } from '../shared/actions';
+import { detectLeaks } from '../shared/leaks';
 
 const app = express();
 app.disable('x-powered-by');
@@ -89,6 +91,37 @@ app.post('/api/budgets/:id', async (req, res) => {
     if (!Number.isSafeInteger(amountCents) || amountCents < 0 || amountCents > 99999999999 || typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Enter a valid monthly budget.');
     const after = { ...before, amountCents, month };
     await writeRecords([{ table: 'budgets', records: [after] }, { table: 'audit', records: [{ id: randomUUID(), entity: 'budget', entityId: after.id, at: new Date().toISOString(), before, after }] }]);
+    return after;
+  });
+  res.json(result);
+});
+app.post('/api/actions', async (req, res) => {
+  const result = await mutate(async () => {
+    const state = await readState(), before = state.notesReminders.find(a => a.id === req.body?.id);
+    const after = validateAction(req.body, state, before);
+    await writeRecords([{ table: 'notesReminders', records: [after] }, { table: 'audit', records: [{ id: randomUUID(), entity: 'financial action', entityId: after.id, at: after.updatedAt, before: before ?? null, after }] }]);
+    return after;
+  });
+  res.json(result);
+});
+app.post('/api/check-ins', async (req, res) => {
+  const result = await mutate(async () => {
+    const state = await readState(), after = validateCheckIn(req.body, state), before = state.dailyCheckIns.find(c => c.id === after.id);
+    await writeRecords([{ table: 'dailyCheckIns', records: [after] }, { table: 'audit', records: [{ id: randomUUID(), entity: 'daily check-in', entityId: after.id, at: after.confirmedAt, before: before ?? null, after }] }]);
+    return after;
+  });
+  res.json(result);
+});
+app.post('/api/leak-reviews', async (req, res) => {
+  const result = await mutate(async () => {
+    const state = await readState();
+    const before = state.leakReviews.find(r => r.id === req.body?.id);
+    if (before) return before;
+    if (typeof req.body?.month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(req.body.month)) throw new Error('Choose a valid review month.');
+    const leak = detectLeaks(state, req.body.month, 'All').find(l => l.id === req.body.id);
+    if (!leak) throw new Error('This review has changed. Refresh before dismissing.');
+    const after = { id: leak.id, month: leak.month, dismissedAt: new Date().toISOString() };
+    await writeRecords([{ table: 'leakReviews', records: [after] }, { table: 'audit', records: [{ id: randomUUID(), entity: 'leak review', entityId: after.id, at: after.dismissedAt, before: null, after }] }]);
     return after;
   });
   res.json(result);

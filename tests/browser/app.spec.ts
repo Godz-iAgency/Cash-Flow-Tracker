@@ -96,8 +96,10 @@ test('entries from another browser tab stay in the shared on-device ledger', asy
   await open(page);
   const second = await context.newPage(); await open(second);
   await add(page, '0.10', 'First tab entry');
+  await second.bringToFront();
   await expect(second.getByRole('button', { name: 'Edit First tab entry, $0.10' })).toBeVisible();
   await add(second, '0.20', 'Second tab entry');
+  await page.bringToFront();
   await expect(page.getByRole('button', { name: 'Edit Second tab entry, $0.20' })).toBeVisible();
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!));
   expect(stored.transactions).toHaveLength(2); expect(stored.audit).toHaveLength(2);

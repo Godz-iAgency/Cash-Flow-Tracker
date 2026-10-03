@@ -17,3 +17,102 @@
 @media(max-width:760px){.money-card p{font-size:10px}.local-notice{font-size:11px}.page-heading p{font-size:12px}.mobile-nav button{font-size:10px}}
 @media(max-width:540px){.transaction-main strong,.transaction-amount strong{font-size:12px}.transaction-main small,.transaction-amount small,.transaction-category small{font-size:10px}.transaction-category{font-size:10px}.category-line>div:first-child{font-size:11px}.empty p{font-size:11px}.form-grid label{font-size:12px}.panel-heading p{font-size:10px}.mobile-nav button{font-size:9px}}
 @media(max-width:360px){.mobile-nav button{font-size:8px}.category-line>div:first-child{font-size:10px}}
+/* Financial actions extend the established card layout without changing the ledger. */
+.mobile-actions-link { display: none; }
+.awareness-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; margin-bottom: 24px; }
+.awareness-after { display: grid; gap: 22px; margin-top: 22px; }
+.awareness-grid .panel { height: 100%; }
+.action-summary { display: grid; grid-template-columns: minmax(0, .6fr) minmax(0, .7fr) minmax(0, 1.1fr); gap: 14px; }
+.action-summary strong { display: block; font-size: 26px; font-weight: 500; letter-spacing: -.7px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.action-summary span { display: block; margin-top: 5px; font-size: 10px; color: #82917b; }
+.upcoming-actions { display: grid; gap: 3px; margin-top: 24px; }
+.upcoming-actions button { display: flex; align-items: center; gap: 9px; text-align: left; padding: 12px 0; border-bottom: 1px solid var(--border); width: 100%; }
+.upcoming-actions button:last-child { border: 0; }
+.upcoming-actions button > svg { color: #899c7c; }
+.upcoming-actions button > span:nth-child(2) { flex: 1; min-width: 0; }
+.upcoming-actions strong { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.upcoming-actions small { display: block; font-size: 10px; color: #8b9c7f; margin-top: 4px; }
+.priority-tag { display: inline-flex; align-items: center; font-size: 10px; padding: 4px 7px; border-radius: 5px; background: #eff3e9; color: #7b8f69; flex-shrink: 0; }
+.priority-tag.high { background: #f4eee4; color: #977b4e; }
+.priority-tag.low { background: #eef2f3; color: #7c9499; }
+.action-card-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 10px; }
+.action-card-footer .button { font-size: 11px; padding: 9px 12px; }
+.action-card-footer .text-button { font-size: 11px; }
+.axiom-card > h3 { font-size: 18px; font-weight: 500; line-height: 1.5; margin-bottom: 18px; }
+.axiom-label { display: block; font-size: 9px; color: #8ea181; letter-spacing: 1.5px; margin-bottom: 7px; }
+.axiom-card > p, .axiom-question p { font-size: 12px; line-height: 1.8; color: #718567; }
+.axiom-question { background: #f3f7ed; border-radius: 8px; margin-top: 18px; padding: 13px 15px; }
+.axiom-question .axiom-label { font-size: 8px; }
+.axiom-card > .text-button { font-size: 10px; margin-top: 8px; }
+.notes-tools { margin-bottom: 22px; }
+.notes-tools .ledger-tools { margin: 0 0 12px; }
+.notes-tools select { width: auto; max-width: 160px; margin: 0; font-size: 12px; }
+.notes-tools > p { color: #8b9d7e; font-size: 11px; line-height: 1.8; }
+.actions-overview strong { font-size: clamp(20px, 2vw, 27px); }
+.action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start; }
+.action-tags { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 17px; }
+.action-card h2 { line-height: 1.5; font-size: 17px; overflow-wrap: anywhere; }
+.action-note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.9; color: #788a6c; margin-top: 12px; }
+.action-details { display: flex; flex-wrap: wrap; gap: 9px 15px; margin-top: 19px; }
+.action-details span { display: inline-flex; align-items: center; gap: 5px; color: #8c9c80; font-size: 10px; overflow-wrap: anywhere; max-width: 100%; }
+.action-savings { display: grid; gap: 7px; padding: 14px; background: #f3f7ed; border: 1px solid #e7eee0; border-radius: 9px; margin-top: 19px; }
+.action-savings span { font-size: 10px; color: #8fa17d; }
+.action-savings strong { font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
+.action-savings small { font-size: 10px; color: #8fa17d; }
+.action-dates { font-size: 10px; color: #9aab89; margin-top: 18px; }
+.action-costs { padding: 15px; margin: 18px 0 0; background: #f7faf3; border: 1px solid #e3eadb; border-radius: 9px; }
+.action-costs legend { color: #6e875d; font-size: 12px; padding: 0 5px; }
+.action-costs > p { font-size: 10px; color: #91a280; margin-bottom: 18px; line-height: 1.8; }
+.action-costs > small { display: block; color: #93a382; font-size: 10px; line-height: 1.8; margin-top: 8px; }
+.action-costs input[readonly] { background: #edf3e7; }
+.savings-preview { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 11px; color: #7a906a; }
+.savings-preview strong { font-size: 17px; overflow-wrap: anywhere; }
+.check-in-values { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
+.check-in-values span { font-size: 10px; color: #8b9a82; display: block; }
+.check-in-values strong { display: block; font-size: 22px; font-weight: 500; letter-spacing: -.5px; margin-top: 8px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.check-in-question { border-top: 1px solid var(--border); padding-top: 20px; margin-top: 24px; display: flex; gap: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.check-in-question h3 { font-size: 14px; font-weight: 500; }
+.check-in-question p { font-size: 11px; color: #8fa080; margin-top: 6px; line-height: 1.8; }
+.check-in-buttons { display: flex; gap: 9px; flex-wrap: wrap; }
+.check-in-buttons .button { font-size: 11px; }
+.leak-list { display: grid; gap: 16px; }
+.leak-item { border: 1px solid #e7ebdf; background: #fafbf7; border-radius: 10px; padding: 17px; }
+.leak-item-title { display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; }
+.leak-item-title h3 { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.leak-item > p { font-size: 12px; line-height: 1.85; color: #8a997a; margin-top: 9px; overflow-wrap: anywhere; }
+.leak-buttons { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 15px; }
+.leak-buttons .button { font-size: 11px; padding: 9px 12px; }
+.leak-buttons .text-button { font-size: 11px; margin-left: auto; }
+.leak-empty { display: flex; align-items: flex-start; gap: 9px; color: #9aaa8a; }
+.leak-empty p { font-size: 11px; line-height: 1.9; }
+.leak-empty > svg { margin-top: 2px; }
+.review-evidence .day-heading { margin: 10px 0 0; }
+@media (max-width: 1200px) { .check-in-values { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1000px) { .awareness-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } .action-summary strong { font-size: 25px; } }
+@media (max-width: 760px) { .mobile-actions-link { display: inline-flex; } .topbar-actions { gap: 3px; } .notes-tools select { flex: 1; max-width: none; min-width: 0; } .notes-tools .button { width: 100%; } }
+@media (max-width: 540px) {
+  .action-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .action-summary { gap: 8px; }
+  .action-summary strong { font-size: 23px; }
+  .action-summary span { font-size: 9px; }
+  .awareness-after { gap: 18px; }
+  .axiom-card > h3 { font-size: 17px; }
+  .axiom-card > p, .axiom-question p { font-size: 12px; }
+  .check-in-values { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; }
+  .check-in-values strong { font-size: 23px; }
+  .check-in-question { align-items: stretch; gap: 15px; }
+  .check-in-buttons { width: 100%; }
+  .check-in-buttons > button:last-child { flex: 1; }
+  .check-in-question h3 { font-size: 13px; }
+  .check-in-question p { font-size: 11px; }
+  .action-card h2 { font-size: 16px; }
+  .notes-tools select { font-size: 14px; }
+  .leak-item { padding: 14px; }
+  .leak-item-title { flex-wrap: wrap; }
+  .leak-buttons { gap: 8px; }
+  .leak-buttons .button { padding: 9px; font-size: 10px; }
+  .leak-buttons .text-button { font-size: 10px; }
+  .leak-item > p { font-size: 11px; }
+}
+@media (max-width: 360px) { .action-summary strong { font-size: 20px; } .topbar-actions .connection-button { font-size: 9px; } .breadcrumb { font-size: 9px; } .action-card-footer { justify-content: flex-start; } }
+@media print { .mobile-actions-link, .notes-tools, .action-card-footer, .check-in-buttons, .leak-buttons { display: none !important; } }
