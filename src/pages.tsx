@@ -1,12 +1,23 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { ArrowDownLeft, ArrowUpRight, ArrowRight, ArrowLeftRight, CalendarDays, Leaf, Wallet, TrendingUp, ShieldCheck, Search, ListFilter, CreditCard, Pencil, Sparkles } from 'lucide-react';
-import { accountFlows, budgetSpent, currentMonth, localDate, money, monthBudgets, monthIncome, scopedTransactions, summarize, type Account, type Budget, type Scope, type State, type Transaction } from '../shared/model';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
+import { ArrowDownLeft, ArrowUpRight, Coins, ArrowRight, ArrowLeftRight, CalendarDays, Leaf, Wallet, TrendingUp, ShieldCheck, Search, ListFilter, CreditCard, Pencil, Sparkles } from 'lucide-react';
+import { accountFlows, budgetSpent, currentMonth, localDate, money, monthBudgets, monthIncome, scopedTransactions, summarize, type Account, type Budget, type Scope, type State, type Transaction, type TransactionType } from '../shared/model';
 import { dateLabel } from './financialActions';
 import { accountRoles, cashTotals, currentBalance, fundedExpenses, settingsFor } from '../shared/allocation';
 import { ReconciliationPanel } from './Reconciliation';
 import { ActivityChart, Empty, MoneyCard, Progress, TransactionList, monthLabel } from './components';
 export type Page = 'Dashboard' | 'Transactions' | 'Budget' | 'Accounts' | 'Insights' | 'Notes & Reminders' | 'Money Flow' | 'Check-In History' | 'Month-End Review';
 type ViewProps = { state: State; month: string; scope: Scope | 'All' };
+export function BalanceHero({ state, onRecord, onAccounts, onActionsVisible }: { state: State; onRecord: (type: TransactionType) => void; onAccounts: () => void; onActionsVisible: (visible: boolean) => void }) {
+  const actions = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!actions.current || !('IntersectionObserver' in window)) { onActionsVisible(false); return; }
+    const observer = new IntersectionObserver(([entry]) => onActionsVisible(entry.isIntersecting && entry.intersectionRatio >= .7), { threshold: [0, .7] });
+    observer.observe(actions.current);
+    return () => { observer.disconnect(); onActionsVisible(false); };
+  }, [onActionsVisible]);
+  const balances = cashTotals(state), known = state.accounts.filter(a => a.type !== 'Credit card').length - balances.total.unknown;
+  return <section className="balance-hero" aria-label="Current cash balance"><div className="hero-header"><span className="hero-brand"><Coins size={21} /><span>Cash Flow Tracker</span></span><span className="hero-live"><span />Your money space</span></div><div className="hero-total"><span>Total cash</span><strong>{balances.total.unknown ? 'Not set' : money(balances.total.amountCents)}</strong><p>All checking &amp; savings accounts · current balances</p><span className="hero-balance-note">{balances.total.unknown ? known ? 'Known subtotal ' + money(balances.total.amountCents) + ' · ' + balances.total.unknown + ' balances to add' : 'Add opening balances in Accounts' : 'Credit-card balances shown separately'}</span></div><div className="hero-actions" ref={actions}><button aria-label="Add transaction" onClick={() => onRecord('Expense')}><span><ArrowUpRight size={22} /></span>Add entry</button><button aria-label="Record income" onClick={() => onRecord('Income')}><span><ArrowDownLeft size={22} /></span>Income</button><button aria-label="Record transfer" onClick={() => onRecord('Transfer')}><span><ArrowLeftRight size={22} /></span>Transfer</button><button aria-label="View account balances" onClick={onAccounts}><span><Wallet size={22} /></span>Accounts</button></div></section>;
+}
 export function Dashboard({ state, month, scope, add, onEdit, go, awareness }: ViewProps & { awareness?: ReactNode; add: () => void; onEdit: (t: Transaction) => void; go: (page: Page) => void }) {
   const transactions = scopedTransactions(state, month, scope), totals = summarize(transactions);
   const budgets = monthBudgets(state, month, scope), planned = budgets.reduce((n, b) => n + b.amountCents, 0);

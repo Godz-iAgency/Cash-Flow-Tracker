@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useId, type ReactNode } from 'react';
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, X, Leaf, Pencil } from 'lucide-react';
 import { money, summarize, type TransactionType, type Transaction, type State } from '../shared/model';
 export const monthLabel = (month: string, short = false) => new Date(`${month}-15T12:00:00`).toLocaleDateString('en-US', { month: short ? 'short' : 'long', year: 'numeric' });
@@ -41,12 +41,16 @@ export function TransactionList({ transactions, state, onEdit, compact = false }
   </div>;
 }
 export function ActivityChart({ transactions, month }: { transactions: Transaction[]; month: string }) {
+  const chartId = useId();
   const days = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
   const values = Array.from({ length: days }, (_, i) => summarize(transactions.filter(t => Number(t.date.slice(-2)) === i + 1)));
   const max = Math.max(100, ...values.flatMap(v => [v.income, v.expenses]));
+  const point = (value: number, index: number) => ((index + .5) / days * 800).toFixed(2) + ',' + (200 - value / max * 200).toFixed(2);
+  const line = (key: 'income' | 'expenses') => values.map((v, i) => (i ? 'L' : 'M') + point(v[key], i)).join(' ');
+  const area = (key: 'income' | 'expenses') => line(key) + ' L' + ((days - .5) / days * 800).toFixed(2) + ',200 L' + (.5 / days * 800).toFixed(2) + ',200 Z';
   return <div className="activity-chart"><div className="chart-bars" role="img" aria-label={`Daily income and expenses for ${monthLabel(month)}`}>
     {[100, 50, 0].map(y => <div className="chart-guide" key={y} style={{ bottom: `${y}%` }}><span>{money(Math.round(max * y / 100))}</span></div>)}
-    <div className="bar-groups">{values.map((v, i) => <div className="bar-group" key={i} title={`${monthLabel(month, true)} ${i + 1}: income ${money(v.income)}, spent ${money(v.expenses)}`}><span className="income-bar" style={{ height: `${v.income / max * 100}%` }} /><span className="expense-bar" style={{ height: `${v.expenses / max * 100}%` }} /></div>)}</div>
+    <svg className="cash-chart" viewBox="0 0 800 200" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id={chartId + '-income'} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--accent)" stopOpacity=".28" /><stop offset="100%" stopColor="var(--accent)" stopOpacity="0" /></linearGradient><linearGradient id={chartId + '-spent'} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--gold)" stopOpacity=".14" /><stop offset="100%" stopColor="var(--gold)" stopOpacity="0" /></linearGradient></defs>{(['income', 'expenses'] as const).map(key => values.some(v => v[key] > 0) && <g key={key}><path d={area(key)} fill={'url(#' + chartId + '-' + (key === 'income' ? 'income' : 'spent') + ')'} /><path d={line(key)} className={key === 'income' ? 'income-line' : 'expense-line'} fill="none" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" /></g>)}{values.map((v, i) => <rect key={i} x={i / days * 800} y="0" width={800 / days} height="200" fill="transparent"><title>{monthLabel(month, true)} {i + 1}: income {money(v.income)}, spent {money(v.expenses)}</title></rect>)}</svg>
   </div><div className="chart-x"><span>1 {monthLabel(month, true).split(' ')[0]}</span><span>10</span><span>20</span><span>{days}</span></div>{!transactions.some(t => t.type !== 'Transfer') && <span className="chart-empty">Your cash flow will take shape here.</span>}</div>;
 }
 export function MoneyCard({ label, value, note, icon, className = '' }: { label: string; value: number; note: string; icon: ReactNode; className?: string }) {

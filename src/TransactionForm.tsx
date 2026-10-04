@@ -4,14 +4,14 @@ import { localDate, parseCents, validateTransaction, type State, type Transactio
 import { IconBox, Modal } from './components';
 import { fundingFor } from '../shared/allocation';
 import { api } from './api';
-export default function TransactionForm({ state, edit, onClose, onSave, aiEnabled }: { state: State; edit?: Transaction; onClose: () => void; onSave: (t: Transaction) => Promise<void>; aiEnabled: boolean }) {
+export default function TransactionForm({ state, edit, initialType = 'Expense', onClose, onSave, aiEnabled }: { state: State; edit?: Transaction; initialType?: TransactionType; onClose: () => void; onSave: (t: Transaction) => Promise<void>; aiEnabled: boolean }) {
   const now = new Date();
-  const [type, setType] = useState<TransactionType>(edit?.type ?? 'Expense');
+  const [type, setType] = useState<TransactionType>(edit?.type ?? initialType);
   const [amount, setAmount] = useState(edit ? (edit.amountCents / 100).toFixed(2) : '');
   const [merchant, setMerchant] = useState(edit?.merchant || edit?.description || '');
   const [description, setDescription] = useState(edit?.description ?? '');
-  const [category, setCategory] = useState(edit?.category ?? 'Food');
-  const [subcategory, setSubcategory] = useState(edit?.subcategory ?? 'Grocery');
+  const [category, setCategory] = useState(edit?.category ?? (initialType === 'Income' ? 'Employment' : 'Food'));
+  const [subcategory, setSubcategory] = useState(edit?.subcategory ?? (initialType === 'Expense' ? 'Grocery' : ''));
   const [accountId, setAccountId] = useState(edit?.accountId ?? '');
   const [scope, setScope] = useState<Scope>(edit?.scope ?? 'Personal');
   const [toAccountId, setToAccountId] = useState(edit?.toAccountId ?? '');

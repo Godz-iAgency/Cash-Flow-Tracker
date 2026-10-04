@@ -171,3 +171,9 @@ Actual minus calculated is the discrepancy. Zero means the balances match; a non
 Observations retain their captured calculation, actual balance, review note and financial input fingerprint. Changes to relevant recorded movements or the opening snapshot flag an old comparison for another review without changing its saved values. Comparison history remains available inside each account. The separate **Update balance** action explicitly resets the opening snapshot, so use comparison when checking a discrepancy.
 
 The only additional table is `Balance_Reconciliations`, with immutable observation rows and an audit record appended in the same request. Existing headers, records and calculations remain compatible; legacy browser storage gains only an empty collection. See [the implementation audit](docs/implementation-audit.md) for the full schema, existing feature inventory, changed files, test results and limitations.
+
+## Mobile design
+
+The tracker uses the supplied reference's dark surfaces, rounded cards, green balance panel and gold accents. The dashboard shows current checking/savings cash and quick entry for expenses, income and transfers; credit-card balances stay separate and unknown balances remain explicitly unknown. Touch controls, scrollable filters, bottom navigation and sticky transaction actions support small screens. The floating add button returns when scrolling past the dashboard shortcuts.
+
+Financial records, calculations and the Google Sheets schema are unchanged. See the [mobile design report](docs/mobile-design.md) for the changed files, validation and remaining device-testing limitations.
