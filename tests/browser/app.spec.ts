@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 async function open(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Your money, in focus.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
 }
 async function add(page: Page, amount: string, merchant: string, type = 'Expense', account?: string, destination?: string) {
   await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click();
@@ -95,6 +95,7 @@ test('populated ledger handles long labels, cents, and every screen on a narrow 
 test('entries from another browser tab stay in the shared on-device ledger', async ({ page, context }) => {
   await open(page);
   const second = await context.newPage(); await open(second);
+  await page.bringToFront();
   await add(page, '0.10', 'First tab entry');
   await second.bringToFront();
   await expect(second.getByRole('button', { name: 'Edit First tab entry, $0.10' })).toBeVisible();

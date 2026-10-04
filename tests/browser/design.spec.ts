@@ -16,7 +16,7 @@ async function open(page: Page, known = false) {
     ];
   }
   await page.addInitScript(data => { if (!localStorage.getItem('cash-flow-tracker-v1')) localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(data)); }, state);
-  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Your money, in focus.' })).toBeVisible(); return state;
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible(); return state;
 }
 for (const width of [390, 1440]) test(`balance hero and quick drafts preserve financial data at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 }); const before = await open(page, true);

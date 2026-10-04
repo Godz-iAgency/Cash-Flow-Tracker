@@ -5,7 +5,7 @@ import { localDate, validateTransaction } from '../../shared/model';
 import { dateLabel } from '../../src/financialActions';
 import { shiftDate } from '../../shared/allocation';
 const today = localDate();
-async function open(page: Page) { await page.goto('/'); await expect(page.getByRole('heading', { name: 'Your money, in focus.' })).toBeVisible(); }
+async function open(page: Page) { await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible(); }
 async function noOverflow(page: Page) { expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true); }
 async function entry(page: Page, type: string, amount: string, name: string, account: string, scope = 'Personal', to = '') {
   await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click(); const form = page.getByRole('dialog');
@@ -50,7 +50,7 @@ test('funding is an explicit recurring plan and fills the account without changi
   await open(page); await page.getByRole('button', { name: 'Budget', exact: true }).click();
   const row = page.locator('.funding-list article').filter({ has: page.getByRole('heading', { name: 'Rent', exact: true }) }); await expect(row).toContainText('UNASSIGNED'); await row.getByRole('button', { name: 'Assign funding' }).click(); const form = page.getByRole('dialog');
   await form.locator('#funding-account').selectOption('chase-savings'); await form.locator('#funding-day').fill('5'); await form.locator('#funding-autopay').selectOption('true'); await form.getByRole('button', { name: 'Save funding' }).click(); await expect(form).toBeHidden(); await expect(row).toContainText('0366'); await expect(row).toContainText('Autopay: Yes');
-  await page.reload(); await expect(page.getByRole('heading', { name: 'Your money, in focus.' })).toBeVisible(); await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click(); const transaction = page.getByRole('dialog'); await transaction.locator('#category').selectOption('Housing'); await transaction.locator('#subcategory').selectOption('Rent'); await expect(transaction.locator('#account')).toHaveValue('chase-savings'); await expect(transaction.locator('#transaction-scope')).toHaveValue('Personal'); await page.keyboard.press('Escape');
+  await page.reload(); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible(); await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click(); const transaction = page.getByRole('dialog'); await transaction.locator('#category').selectOption('Housing'); await transaction.locator('#subcategory').selectOption('Rent'); await expect(transaction.locator('#account')).toHaveValue('chase-savings'); await expect(transaction.locator('#transaction-scope')).toHaveValue('Personal'); await page.keyboard.press('Escape');
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!)); expect(stored.expenseFunding).toHaveLength(1); expect(stored.transactions).toHaveLength(0); expect(stored.budgets[0].amountCents).toBe(121000);
 });
 test('in-app reminder, yesterday review and calendar confirmation persist without completing automatically', async ({ page }) => {

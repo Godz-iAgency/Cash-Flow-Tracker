@@ -50,7 +50,7 @@ export default function TransactionForm({ state, edit, initialType = 'Expense', 
       onClose();
     } catch (e) { setError((e as Error).message); } finally { setSaving(false); }
   }
-  return <Modal title={edit ? 'Edit transaction' : 'Add a transaction'} subtitle={edit ? 'Your previous entry stays in the audit history.' : 'Every cent counts. Capture it while it’s fresh.'} onClose={onClose}>
+  return <Modal title={edit ? 'Edit transaction' : 'Add a transaction'} subtitle={edit ? 'Previous versions remain in audit history.' : undefined} onClose={onClose}>
     <form onSubmit={submit} className="transaction-form">
       <div className="segmented transaction-types" aria-label="Transaction type">{(['Expense', 'Income', 'Transfer'] as const).map(t => <button key={t} type="button" aria-pressed={type === t} className={type === t ? 'active' : ''} onClick={() => { setType(t); setCategory(t === 'Income' ? 'Employment' : 'Food'); setSubcategory(t === 'Expense' ? 'Grocery' : ''); }}><IconBox type={t} small />{t}</button>)}</div>
       {aiEnabled && !edit && <><button type="button" className="ai-link" onClick={() => setAiOpen(!aiOpen)}><Sparkles size={16} />Describe a transaction</button>{aiOpen && <div className="ai-entry"><label htmlFor="ai-text">What happened?</label><textarea id="ai-text" value={aiText} maxLength={2000} onChange={e => setAiText(e.target.value)} placeholder="Spent $6.42 at H-E-B on candy using Capital One checking." /><button className="button secondary" type="button" disabled={!aiText.trim() || aiBusy} onClick={draft}>{aiBusy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}Create draft</button><p>Gemini proposes an entry. You review and save it.</p></div>}</>}

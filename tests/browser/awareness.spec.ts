@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { initialState } from '../../shared/seed';
 import { localDate, validateTransaction } from '../../shared/model';
 const today = localDate();
-async function open(page: Page) { await page.goto('/'); await expect(page.getByRole('heading', { name: 'Your money, in focus.' })).toBeVisible(); }
+async function open(page: Page) { await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible(); }
 async function notes(page: Page) { await page.getByRole('button', { name: 'Notes & Reminders', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Notes & Reminders', exact: true })).toBeVisible(); }
 async function addAction(page: Page) {
   await notes(page);

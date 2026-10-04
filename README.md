@@ -177,3 +177,7 @@ The only additional table is `Balance_Reconciliations`, with immutable observati
 The tracker uses the supplied reference's dark surfaces, rounded cards, green balance panel and gold accents. The dashboard shows current checking/savings cash and quick entry for expenses, income and transfers; credit-card balances stay separate and unknown balances remain explicitly unknown. Touch controls, scrollable filters, bottom navigation and sticky transaction actions support small screens. The floating add button returns when scrolling past the dashboard shortcuts.
 
 Financial records, calculations and the Google Sheets schema are unchanged. See the [mobile design report](docs/mobile-design.md) for the changed files, validation and remaining device-testing limitations.
+
+## Mobile text and copy audit
+
+Body text and primary controls use 16px at default settings, supporting details use at least 14px, and the compact bottom-navigation labels use 12px with icons. Sizes use relative units and layouts reflow for enlarged text. Page names and empty states are direct; repeated slogans and introductions are removed. Financial explanations and storage warnings remain. See the [readability audit](docs/readability-audit.md) for the full scale, copy decisions, tests and limitations.

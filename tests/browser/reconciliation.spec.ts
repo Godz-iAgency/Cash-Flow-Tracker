@@ -9,7 +9,7 @@ async function open(page: Page, unknown = false, expense = false) {
   if (!unknown) state.accounts = state.accounts.map(a => ({ ...a, balanceCents: a.type === 'Credit card' ? 20000 : 100000, balanceAsOf: asOf, balanceUpdatedAt: new Date(asOf).toISOString(), balanceIncludedTransactionIds: '[]' }));
   if (expense) state.transactions = [validateTransaction({ id: 'purchase', date: today, time: '00:01', type: 'Expense', amountCents: 2500, category: 'Food', subcategory: 'Grocery', merchant: 'Existing groceries', description: '', accountId: 'capital-one-checking', toAccountId: '', scope: 'Personal', classification: 'Need', notes: '' }, state)];
   await page.addInitScript(data => { if (!localStorage.getItem('cash-flow-tracker-v1')) localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(data)); }, state);
-  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Your money, in focus.' })).toBeVisible(); await page.getByRole('button', { name: 'Accounts', exact: true }).click();
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible(); await page.getByRole('button', { name: 'Accounts', exact: true }).click();
 }
 const card = (page: Page, name = 'Capital One Personal Checking') => page.locator('.account-card').filter({ has: page.getByRole('heading', { name, exact: true }) });
 const stored = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!));
