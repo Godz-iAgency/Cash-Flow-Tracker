@@ -181,3 +181,9 @@ Financial records, calculations and the Google Sheets schema are unchanged. See 
 ## Mobile text and copy audit
 
 Body text and primary controls use 16px at default settings, supporting details use at least 14px, and the compact bottom-navigation labels use 12px with icons. Sizes use relative units and layouts reflow for enlarged text. Page names and empty states are direct; repeated slogans and introductions are removed. Financial explanations and storage warnings remain. See the [readability audit](docs/readability-audit.md) for the full scale, copy decisions, tests and limitations.
+
+## Scrolling and guided Sheets setup
+
+Pages support native wheel, trackpad and touch scrolling. Forms scroll inside their dialog while the page is locked; the lock follows the dialog's presence and disappears when it closes. Review menus and enlarged-text bottom navigation also scroll horizontally. Reload the app after updating to load the current files. In desktop device emulators, use the wheel/trackpad inside the page; mouse dragging depends on the emulator's gesture controls.
+
+See the [guided Google Sheets setup](docs/google-sheets-setup.md) to connect the existing database integration. Export a backup first: on-device entries do not automatically migrate when Sheets is enabled. Keep downloaded service account credentials outside the repository and provide their local path instead of pasting secret contents.

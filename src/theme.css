@@ -376,3 +376,12 @@ body { overflow-wrap: anywhere; }
   .classification .segmented button { font-size: var(--type-body); }
   .action-card-footer .button { font-size: var(--type-body); }
 }
+
+/* Native page scrolling; dialog locks follow the DOM, never a saved inline value. */
+html { min-height: 100%; overflow-y: auto !important; scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+body { min-height: 100dvh; overflow-y: auto !important; touch-action: pan-x pan-y pinch-zoom; }
+html:has(.modal-backdrop), body:has(.modal-backdrop) { overflow-y: hidden !important; }
+.modal { overflow-y: auto; touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch; }
+.extension-nav, .mobile-nav { touch-action: pan-x pan-y pinch-zoom; -webkit-overflow-scrolling: touch; }
+.sidebar { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media print { html, body { overflow: visible !important; } }

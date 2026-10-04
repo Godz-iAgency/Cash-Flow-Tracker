@@ -18,7 +18,6 @@ export function Modal({ title, subtitle, children, onClose, wide = false }: { ti
   const close = useRef(onClose); close.current = onClose;
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    const overflow = document.body.style.overflow; document.body.style.overflow = 'hidden';
     const frame = requestAnimationFrame(() => { const first = ref.current?.querySelector<HTMLElement>('[data-autofocus]'); (first ?? ref.current)?.focus(); });
     function handle(event: KeyboardEvent) {
       if (event.key === 'Escape') close.current();
@@ -30,7 +29,7 @@ export function Modal({ title, subtitle, children, onClose, wide = false }: { ti
       }
     }
     document.addEventListener('keydown', handle);
-    return () => { cancelAnimationFrame(frame); document.body.style.overflow = overflow; document.removeEventListener('keydown', handle); previous?.focus(); };
+    return () => { cancelAnimationFrame(frame); document.removeEventListener('keydown', handle); previous?.focus(); };
   }, []);
   return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div ref={ref} className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}><div className="modal-heading"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={21} /></button></div>{children}</div></div>;
 }
