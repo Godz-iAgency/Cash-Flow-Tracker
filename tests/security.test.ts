@@ -14,7 +14,7 @@ test('private Sheets endpoints require authentication and reject cross-origin wr
   });
   try {
     await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Test server did not start.')), 15000);
+      const timeout = setTimeout(() => reject(new Error('Test server did not start.')), 45000);
       child.stdout!.on('data', chunk => { if (String(chunk).includes('running at')) { clearTimeout(timeout); resolve(); } });
       child.once('error', error => { clearTimeout(timeout); reject(error); });
       child.once('exit', code => { if (code) { clearTimeout(timeout); reject(new Error(`Test server exited: ${code}`)); } });

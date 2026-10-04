@@ -391,3 +391,15 @@ html:has(.modal-backdrop), body:has(.modal-backdrop) { overflow-y: hidden !impor
 .extension-nav, .mobile-nav { touch-action: pan-x pan-y pinch-zoom; -webkit-overflow-scrolling: touch; }
 .sidebar { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 @media print { html, body { overflow: visible !important; } .modal, .modal-content { display: block; overflow: visible; max-height: none; } }
+/* Reviewed cloud setup uses the same readable scale and native page scrolling. */
+.cloud-setup { width: min(100%, 560px); padding: 24px; display: grid; gap: 18px; margin: 24px auto; }
+.cloud-setup h1 { font-size: 1.5rem; }
+.cloud-setup h2 { font-size: 1.125rem; overflow-wrap: anywhere; }
+.cloud-setup p { font-size: 1rem; line-height: 1.5; }
+.cloud-counts { margin: 0; display: grid; gap: 8px; }
+.cloud-counts > div { display: flex; justify-content: space-between; gap: 16px; }
+.cloud-counts dd { margin: 0; font-weight: 700; }
+.cloud-file { cursor: pointer; position: relative; overflow: hidden; }
+.cloud-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.cloud-confirm { display: flex; align-items: flex-start; gap: 12px; font-size: 1rem; line-height: 1.5; }
+.cloud-confirm input { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 2px; }

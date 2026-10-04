@@ -1,4 +1,6 @@
 import { JWT } from 'google-auth-library';
+import { readFileSync } from 'node:fs';
+import { randomBytes, randomInt } from 'node:crypto';
 import { initialState } from '../shared/seed';
 import type { State } from '../shared/model';
 
@@ -27,7 +29,15 @@ let ids: Partial<Record<Table, number>> = {};
 let initialized: Promise<void> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
 export const configured = () => Boolean(process.env.GOOGLE_SHEET_ID && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY);
-const client = () => new JWT({ email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL, key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'), scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+export const reportsConfigured = () => Boolean(process.env.GOOGLE_SHEET_ID && (configured() || process.env.FIREBASE_SERVICE_ACCOUNT_PATH));
+const client = () => {
+  let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL, key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if ((!email || !key) && process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+    try { const credential = JSON.parse(readFileSync(process.env.FIREBASE_SERVICE_ACCOUNT_PATH, 'utf8')); email = credential.client_email; key = credential.private_key; }
+    catch { throw new Error('The private service-account credential could not be read.'); }
+  }
+  return new JWT({ email, key, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+};
 let auth: JWT | undefined;
 async function request(path: string, body?: unknown): Promise<any> {
   auth ??= client();
@@ -118,4 +128,21 @@ export function mutate<T>(operation: () => Promise<T>): Promise<T> {
   const result = queue.then(operation);
   queue = result.catch(() => undefined);
   return result;
+}
+
+// Firestore is authoritative. Each export creates a new immutable-by-convention
+// set of report tabs. Existing tabs and manually entered cells are never cleared.
+export async function exportSnapshot(state: State) {
+  if (!reportsConfigured()) throw new Error('Set the spreadsheet ID and share it with the server service account first.');
+  const prefix = `CFT_${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}_${randomBytes(3).toString('hex')}`;
+  const metadata = await request('?fields=sheets.properties');
+  const used = new Set<number>((metadata.sheets ?? []).map((s: any) => s.properties.sheetId));
+  const exportSheets = names.map(table => {
+    let id = randomInt(1, 2_000_000_000); while (used.has(id)) id = randomInt(1, 2_000_000_000); used.add(id);
+    return { table, id, title: `${prefix}_${sheetName(table)}` };
+  });
+  const requests: unknown[] = exportSheets.map(({ table, id, title }) => ({ addSheet: { properties: { sheetId: id, title, gridProperties: { frozenRowCount: 1, rowCount: Math.max(100, state[table].length + 1), columnCount: headers[table].length } } } }));
+  for (const { table, id } of exportSheets) requests.push({ updateCells: { start: { sheetId: id, rowIndex: 0, columnIndex: 0 }, fields: 'userEnteredValue', rows: [cells(sheetHeaders(table)), ...state[table].map(record => cells(headers[table].map(h => (record as unknown as Record<string, unknown>)[h])))] } });
+  await request(':batchUpdate', { requests });
+  return { prefix, tabs: exportSheets.map(s => s.title), exportedAt: new Date().toISOString(), records: names.reduce((n, table) => n + state[table].length, 0) };
 }

@@ -12,7 +12,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'node --import tsx server/index.ts', url: 'http://127.0.0.1:3001/api/status', reuseExistingServer: !process.env.CI,
-    env: { GOOGLE_SHEET_ID: '', GOOGLE_SERVICE_ACCOUNT_EMAIL: '', GOOGLE_PRIVATE_KEY: '' },
+    env: { STORAGE_BACKEND: '', GOOGLE_SHEET_ID: '', GOOGLE_SERVICE_ACCOUNT_EMAIL: '', GOOGLE_PRIVATE_KEY: '' },
     timeout: 90000,
   },
 });

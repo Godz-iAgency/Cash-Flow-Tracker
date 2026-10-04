@@ -1,0 +1,20 @@
+import { useState } from 'react';
+import { Cloud, Download, Upload, LogOut } from 'lucide-react';
+import type { State } from '../shared/model';
+import { stateTables, validateBackup } from '../shared/backup';
+import { initialState } from '../shared/seed';
+import { api } from './api';
+
+export default function CloudSetup({ onImported, onSignOut }: { onImported: () => void; onSignOut: () => Promise<void> }) {
+  const [candidate, setCandidate] = useState<State>();
+  const [source, setSource] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false), [confirmed, setConfirmed] = useState(false);
+  function review(input: unknown, label: string) {
+    setError(''); setConfirmed(false);
+    try { setCandidate(validateBackup(input)); setSource(label); } catch (e) { setCandidate(undefined); setError((e as Error).message); }
+  }
+  function download() {
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ ...candidate, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'cash-flow-before-cloud-import.json'; link.click(); URL.revokeObjectURL(url);
+  }
+  return <div className="login-screen"><section className="panel cloud-setup"><span className="brand-mark"><Cloud size={25} /></span><h1>Set up cloud storage</h1><p>Your cloud tracker is empty. Choose the records to copy into it. This device’s records stay intact.</p><div className="help-actions"><button className="button secondary" disabled={busy} onClick={() => { try { const saved = localStorage.getItem('cash-flow-tracker-v1'); review(saved ? JSON.parse(saved) : initialState(), saved ? 'This device' : 'Starting plan — no recorded transactions'); } catch { setError('This device’s data could not be read. Choose your exported backup.'); } }}>Review this device</button><label className="button secondary cloud-file"><Upload size={16} />Choose backup<input type="file" accept=".json,application/json" disabled={busy} onChange={async e => { const file = e.target.files?.[0]; if (!file) return; try { if (file.size > 2_000_000) throw new Error('Choose a backup smaller than 2 MB.'); review(JSON.parse(await file.text()), file.name); } catch (e) { setCandidate(undefined); setError((e as Error).message); } }} /></label></div>{candidate && <><h2>Review: {source}</h2><dl className="cloud-counts">{stateTables.filter(table => candidate[table].length).map(table => <div key={table}><dt>{({ accounts: 'Accounts', categories: 'Categories', budgets: 'Budget items', income: 'Income plans', transactions: 'Transactions', audit: 'Audit history', notesReminders: 'Notes & reminders', dailyCheckIns: 'Daily check-ins', leakReviews: 'Leak reviews', expenseFunding: 'Expense funding', incomeSources: 'Income sources', settings: 'Settings', monthReviews: 'Month reviews', balanceReconciliations: 'Balance comparisons' })[table]}</dt><dd>{candidate[table].length}</dd></div>)}</dl><p>{candidate.transactions.length} transactions. {candidate.accounts.filter(a => a.balanceCents !== null).length} known opening balances. Amounts, classifications, timestamps, and history will be preserved.</p><button className="button secondary" onClick={download}><Download size={16} />Download safety backup</button><label className="cloud-confirm"><input type="checkbox" checked={confirmed} disabled={busy} onChange={e => setConfirmed(e.target.checked)} />I have kept a backup and reviewed these records.</label><button className="button primary" disabled={!confirmed || busy} onClick={async () => { setError(''); setBusy(true); try { await api('cloud/import', { confirmed: true, state: candidate }); onImported(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}>{busy ? 'Importing…' : 'Copy reviewed records to Firestore'}</button></>}{error && <p className="form-error" role="alert">{error}</p>}<button className="text-button" disabled={busy} onClick={() => void onSignOut()}><LogOut size={16} />Sign out</button></section></div>;
+}

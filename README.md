@@ -46,6 +46,12 @@ These totals are derived from records, not hard-coded UI totals. Initial recorde
 
 The written plan becomes a recurring monthly template. A budget edit creates an override only for the selected month. All amounts use USD. The browser's local date/time determines entry defaults and calendar periods; weeks run Monday through today. Account balances start from manually entered bank snapshots and apply recorded movements after their financial timestamp. Unknown balances remain unknown. Credit-card balances represent amounts owed. Transfers affect account movement but never increase income, expenses, needs, or wants.
 
+## Firestore and Sheets
+
+The recommended storage is **Firestore with private Google sign-in**, with Google Sheets receiving dated reporting exports. Existing on-device and legacy Sheets modes remain supported. No financial records move automatically when cloud storage is enabled.
+
+Follow [the Firestore setup guide](docs/firestore-setup.md). It covers owner-only access, private server credentials, reviewed backup import, report exports, the schema, and current limits. Keep production Firestore rules set to deny browser access; the authenticated server performs all financial writes atomically with audit history. An import cannot overwrite an existing cloud tracker.
+
 ## Google Sheets setup
 
 1. Create a Google Cloud project and enable the **Google Sheets API**.

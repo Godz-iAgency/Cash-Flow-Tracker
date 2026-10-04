@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Financial records are accessed through the owner-restricted server only.
+    // Firebase Admin uses IAM; browser access stays denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

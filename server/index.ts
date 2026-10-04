@@ -3,7 +3,9 @@ import express from 'express';
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { configured, mutate, readState, writeRecords } from './sheets';
+import { backend, configured, mutate, readState, writeRecords, withCloudUser, cloudStore } from './storage';
+import { authenticateFirebase, firebaseWebConfig, firestoreEnabled, validateFirebaseConfiguration } from './firebase';
+import { reportsConfigured, exportSnapshot } from './sheets';
 import { validateTransaction } from '../shared/model';
 import { validateAction, validateCheckIn } from '../shared/actions';
 import { balanceSnapshotIds, validSnapshot, validateFunding, validateIncomeSource, validateMonthReview, validateSettings } from '../shared/allocation';
@@ -13,10 +15,11 @@ import { detectLeaks } from '../shared/leaks';
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 'loopback');
-app.use(express.json({ limit: '128kb' }));
+app.use(express.json({ limit: '2mb' }));
 const production = process.env.NODE_ENV === 'production';
 const secret = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
-if (configured() && (!process.env.APP_PASSWORD || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
+validateFirebaseConfiguration();
+if (backend() === 'sheets' && (!process.env.APP_PASSWORD || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
   throw new Error('Set APP_PASSWORD and a SESSION_SECRET of at least 32 characters before using Google Sheets.');
 }
 const sign = (s: string) => createHmac('sha256', secret).update(s).digest('hex');
@@ -36,9 +39,17 @@ app.use('/api', (req, res, next) => {
   }
   next();
 });
-app.get('/api/status', (req, res) => res.json({ configured: configured(), authenticated: signedIn(req), aiEnabled: Boolean(process.env.GEMINI_API_KEY) }));
+app.get('/api/status', async (req, res) => {
+  let authenticated = signedIn(req);
+  if (firestoreEnabled()) {
+    authenticated = false;
+    if (req.headers.authorization) try { await authenticateFirebase(req.headers.authorization); authenticated = true; } catch { /* Status never reveals token details. */ }
+  }
+  res.json({ configured: configured(), backend: backend(), authenticated, aiEnabled: Boolean(process.env.GEMINI_API_KEY), sheetsExportEnabled: firestoreEnabled() && reportsConfigured(), firebase: firestoreEnabled() ? firebaseWebConfig() : undefined });
+});
 const attempts = new Map<string, { count: number; until: number }>();
 app.post('/api/login', (req, res) => {
+  if (firestoreEnabled()) { res.status(409).json({ error: 'Use Google sign-in for Firestore.' }); return; }
   const ip = req.ip ?? 'local';
   const entry = attempts.get(ip);
   if (entry && entry.until > Date.now() && entry.count >= 10) { res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' }); return; }
@@ -53,10 +64,30 @@ app.post('/api/login', (req, res) => {
   res.json({ ok: true });
 });
 app.post('/api/logout', (_req, res) => { res.clearCookie('cft_session', { path: '/' }); res.json({ ok: true }); });
-app.use('/api', (req, res, next) => {
-  if (!configured()) { res.status(503).json({ error: 'Google Sheets is not configured.' }); return; }
+app.use('/api', async (req, res, next) => {
+  if (!configured()) { res.status(503).json({ error: 'Cloud storage is not configured.' }); return; }
+  if (firestoreEnabled()) {
+    try {
+      const uid = await authenticateFirebase(req.headers.authorization);
+      withCloudUser(uid, next);
+    } catch { res.status(401).json({ error: 'Please sign in with the owner’s Google account.' }); }
+    return;
+  }
   if (!signedIn(req)) { res.status(401).json({ error: 'Please sign in again.' }); return; }
   next();
+});
+app.get('/api/cloud/info', async (_req, res) => {
+  if (!firestoreEnabled()) { res.status(409).json({ error: 'Firestore is not enabled.' }); return; }
+  res.json(await cloudStore().info());
+});
+app.post('/api/cloud/import', async (req, res) => {
+  if (!firestoreEnabled()) { res.status(409).json({ error: 'Firestore is not enabled.' }); return; }
+  if (req.body?.confirmed !== true) throw new Error('Review your backup and confirm the import first.');
+  res.json(await cloudStore().initialize(req.body.state));
+});
+app.post('/api/sheets/export', async (_req, res) => {
+  if (!firestoreEnabled()) { res.status(409).json({ error: 'Snapshot exports require Firestore storage.' }); return; }
+  res.json(await exportSnapshot(await readState()));
 });
 app.get('/api/state', async (_req, res) => res.json(await readState()));
 app.post('/api/transactions', async (req, res) => {
