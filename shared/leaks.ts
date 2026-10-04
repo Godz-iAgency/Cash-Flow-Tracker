@@ -1,4 +1,5 @@
 import { money, monthBudgets, type Scope, type State, type Transaction } from './model';
+import { settingsFor } from './allocation';
 export interface FinancialLeak {
   id: string; month: string; scope: Scope; title: string; message: string;
   category: 'Bill Review' | 'Subscription' | 'Financial Leak';
@@ -60,10 +61,11 @@ export function detectLeaks(state: State, month: string, scope: Scope | 'All'): 
   for (const space of ['Personal', 'Business'] as const) {
     if (scope !== 'All' && scope !== space) continue;
     const scoped = expenses.filter(t => t.scope === space), current = scoped.filter(t => t.date.startsWith(month));
-    const small = current.filter(t => t.classification === 'Want' && t.amountCents < 1000);
+    const threshold = settingsFor(state).smallPurchaseThresholdCents;
+    const small = current.filter(t => t.classification === 'Want' && t.amountCents < threshold);
     if (small.length >= 5) {
       const total = small.reduce((n, t) => n + t.amountCents, 0);
-      add('small-wants', space, 'Repeated small discretionary purchases', `${small.length} want purchases under $10 total ${money(total)} this month. Review the pattern and decide whether to act.`, small, total, 'Financial Leak');
+      add('small-wants', space, 'Repeated small discretionary purchases', `${small.length} want purchases under ${money(threshold)} total ${money(total)} this month. Review the pattern and decide whether to act.`, small, total, 'Financial Leak');
     }
     for (const category of new Set(current.map(t => t.category))) {
       const historical = months.map(m => scoped.filter(t => t.date.startsWith(m) && t.category === category));

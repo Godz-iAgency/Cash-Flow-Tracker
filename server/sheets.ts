@@ -4,19 +4,23 @@ import type { State } from '../shared/model';
 
 type Table = keyof State;
 const headers: Record<Table, string[]> = {
-  accounts: ['id', 'name', 'lastFour', 'scope', 'type', 'balanceCents', 'balanceUpdatedAt'],
+  accounts: ['id', 'name', 'lastFour', 'scope', 'type', 'balanceCents', 'balanceUpdatedAt', 'balanceIncludedTransactionIds', 'balanceAsOf'],
   categories: ['id', 'name'],
   budgets: ['id', 'label', 'category', 'amountCents', 'scope', 'month'],
   income: ['id', 'label', 'amountCents', 'scope', 'month'],
   transactions: ['id', 'date', 'time', 'type', 'amountCents', 'category', 'subcategory', 'merchant', 'description', 'accountId', 'toAccountId', 'scope', 'classification', 'notes', 'createdAt', 'updatedAt', 'revision'],
   audit: ['id', 'entity', 'entityId', 'at', 'before', 'after'],
   notesReminders: ['id', 'title', 'note', 'category', 'relatedExpenseId', 'relatedAccountId', 'scope', 'priority', 'status', 'reminderDate', 'amountAffectedCents', 'previousCostCents', 'newCostCents', 'monthlySavingsCents', 'annualizedSavingsCents', 'createdAt', 'completedAt', 'updatedAt', 'revision'],
-  dailyCheckIns: ['id', 'date', 'scope', 'confirmedAt', 'transactionFingerprint', 'revision'],
+  dailyCheckIns: ['id', 'date', 'scope', 'confirmedAt', 'transactionFingerprint', 'revision', 'completed', 'completedAt', 'transactionsReviewed'],
   leakReviews: ['id', 'month', 'dismissedAt'],
+  expenseFunding: ['id', 'budgetId', 'month', 'paymentAccountId', 'amountCents', 'dueDay', 'autopay', 'updatedAt', 'revision'],
+  incomeSources: ['id', 'name', 'scope', 'category', 'defaultAccountId', 'updatedAt', 'revision'],
+  settings: ['id', 'reminderTime', 'smallPurchaseThresholdCents', 'updatedAt', 'revision'],
+  monthReviews: ['id', 'month', 'scope', 'note', 'nextMonth', 'createdAt', 'updatedAt', 'revision'],
 };
 const names = Object.keys(headers) as Table[];
-const sheetName = (table: Table) => ({ notesReminders: 'Notes_Reminders', dailyCheckIns: 'Daily_Checkins', leakReviews: 'Leak_Reviews' } as Partial<Record<Table, string>>)[table] ?? table;
-const columnName = (table: Table, name: string) => table === 'notesReminders' || table === 'dailyCheckIns' || table === 'leakReviews' ? name.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`) : name;
+const sheetName = (table: Table) => ({ notesReminders: 'Notes_Reminders', dailyCheckIns: 'Daily_Checkins', leakReviews: 'Leak_Reviews', expenseFunding: 'Expense_Funding', incomeSources: 'Income_Sources', settings: 'Settings', monthReviews: 'Month_Reviews' } as Partial<Record<Table, string>>)[table] ?? table;
+const columnName = (table: Table, name: string) => !['accounts', 'categories', 'budgets', 'income', 'transactions', 'audit'].includes(table) ? name.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`) : name;
 const sheetHeaders = (table: Table) => headers[table].map(name => columnName(table, name));
 let ids: Partial<Record<Table, number>> = {};
 let initialized: Promise<void> | undefined;
@@ -38,7 +42,7 @@ async function request(path: string, body?: unknown): Promise<any> {
   return response.json();
 }
 function cells(values: unknown[]) {
-  return { values: values.map(value => ({ userEnteredValue: typeof value === 'number' ? { numberValue: value } : { stringValue: value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value) } })) };
+  return { values: values.map(value => ({ userEnteredValue: typeof value === 'number' ? { numberValue: value } : typeof value === 'boolean' ? { boolValue: value } : { stringValue: value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value) } })) };
 }
 function append(table: Table, records: unknown[]) {
   return { appendCells: { sheetId: ids[table], fields: 'userEnteredValue', rows: records.map(record => cells(headers[table].map(h => (record as Record<string, unknown>)[h]))) } };
@@ -60,7 +64,10 @@ async function initialize() {
   const writes: unknown[] = [];
   names.forEach((table, i) => {
     const row = existing.valueRanges[i]?.values?.[0] ?? [];
-    if (row.length && row.join('|') !== sheetHeaders(table).join('|')) throw new Error(`The ${table} sheet has an incompatible header. Use a separate empty spreadsheet; existing data has not been overwritten.`);
+    const legacyLength = table === 'dailyCheckIns' ? 6 : table === 'accounts' ? 7 : 0;
+    if (legacyLength && row.length === legacyLength && row.join('|') === sheetHeaders(table).slice(0, legacyLength).join('|')) {
+      writes.push({ updateCells: { start: { sheetId: ids[table], rowIndex: 0, columnIndex: legacyLength }, fields: 'userEnteredValue', rows: [cells(sheetHeaders(table).slice(legacyLength))] } });
+    } else if (row.length && row.join('|') !== sheetHeaders(table).join('|')) throw new Error(`The ${sheetName(table)} sheet has an incompatible header. Existing data has not been overwritten; review the header before retrying.`);
     if (!row.length) {
       writes.push({ appendCells: { sheetId: ids[table], fields: 'userEnteredValue', rows: [cells(sheetHeaders(table))] } });
       if (seed[table].length) writes.push(append(table, seed[table]));
@@ -84,12 +91,16 @@ export async function readState(): Promise<State> {
       let value: unknown = row[j] ?? '';
       if (['amountCents', 'revision'].includes(key)) value = Number(value);
       if (key.endsWith('Cents') && key !== 'amountCents') value = value === '' ? null : Number(value);
-      if ((key === 'balanceUpdatedAt' || key === 'completedAt') && value === '') value = null;
+      if ((key === 'balanceUpdatedAt' || key === 'balanceAsOf' || key === 'balanceIncludedTransactionIds' || key === 'completedAt') && value === '') value = null;
+      if (key === 'dueDay') value = value === '' ? null : Number(value);
+      if (key === 'transactionsReviewed') value = value === '' ? undefined : Number(value);
+      if (key === 'autopay' || key === 'completed') value = value === '' && key === 'completed' ? undefined : value === true || value === 'true';
       if (key === 'before' || key === 'after') value = value ? JSON.parse(String(value)) : null;
       return [key, value];
     })));
     // Transactions, account changes, and monthly plans are append-only versions.
     // Resolve the latest record by stable ID, never by a client-supplied row number.
+    if (table === 'dailyCheckIns') for (const record of records) { record.completed ??= true; record.completedAt ||= record.confirmedAt; record.transactionsReviewed ??= JSON.parse(String(record.transactionFingerprint)).length; }
     const latest = new Map<string, unknown>();
     for (const record of records) latest.set(String(record.id) + (table === 'budgets' || table === 'income' ? `:${record.month}` : ''), record);
     state[table] = Array.from(latest.values());

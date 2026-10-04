@@ -11,15 +11,15 @@ export interface FinancialAction {
   monthlySavingsCents: number | null; annualizedSavingsCents: number | null;
   createdAt: string; updatedAt: string; completedAt: string | null; revision: number;
 }
-export interface DailyCheckIn { id: string; date: string; scope: Scope | 'All'; confirmedAt: string; transactionFingerprint: string; revision: number; }
+export interface DailyCheckIn { id: string; date: string; scope: Scope | 'All'; confirmedAt: string; transactionFingerprint: string; revision: number; completed?: boolean; completedAt?: string; transactionsReviewed?: number; }
 export interface LeakReview { id: string; month: string; dismissedAt: string; }
 export function extendState(input: unknown): State {
   if (!input || typeof input !== 'object') throw new Error('Saved data could not be read.');
   const data = input as Record<string, unknown>;
   for (const key of ['accounts', 'categories', 'budgets', 'income', 'transactions', 'audit']) if (!Array.isArray(data[key])) throw new Error('Your saved financial data could not be read. Recover it before continuing.');
-  for (const key of ['notesReminders', 'dailyCheckIns', 'leakReviews']) if (data[key] !== undefined && !Array.isArray(data[key])) throw new Error('Your saved action data could not be read. Recover it before continuing.');
+  for (const key of ['notesReminders', 'dailyCheckIns', 'leakReviews', 'expenseFunding', 'incomeSources', 'settings', 'monthReviews']) if (data[key] !== undefined && !Array.isArray(data[key])) throw new Error('Your saved action data could not be read. Recover it before continuing.');
   // Add only new, empty collections to legacy data; preserve every existing record.
-  return { ...data, notesReminders: data.notesReminders ?? [], dailyCheckIns: data.dailyCheckIns ?? [], leakReviews: data.leakReviews ?? [] } as unknown as State;
+  return { ...data, notesReminders: data.notesReminders ?? [], dailyCheckIns: data.dailyCheckIns ?? [], leakReviews: data.leakReviews ?? [], expenseFunding: data.expenseFunding ?? [], incomeSources: data.incomeSources ?? [], settings: data.settings ?? [], monthReviews: data.monthReviews ?? [] } as unknown as State;
 }
 export function validDate(date: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(`${date}T12:00:00Z`)) && new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) === date;
@@ -37,7 +37,7 @@ export function validateAction(input: unknown, state: State, previous?: Financia
   const scope = text('scope', 10) as Scope;
   if (!['Personal', 'Business'].includes(scope)) throw new Error('Choose Personal or Business.');
   const relatedExpenseId = text('relatedExpenseId', 150), relatedAccountId = text('relatedAccountId', 100);
-  if (relatedAccountId && !state.accounts.some(a => a.id === relatedAccountId && a.scope === scope)) throw new Error('Choose a related account in the same money space.');
+  if (relatedAccountId && !state.accounts.some(a => a.id === relatedAccountId)) throw new Error('Choose a valid related account.');
   if (relatedExpenseId) {
     const [kind, expenseId] = relatedExpenseId.split(':');
     const expense = kind === 'budget' ? state.budgets.find(b => b.id === expenseId) : kind === 'transaction' ? state.transactions.find(t => t.id === expenseId && t.type === 'Expense') : undefined;
@@ -80,5 +80,6 @@ export function validateCheckIn(input: unknown, state: State): DailyCheckIn {
   const fingerprint = transactionFingerprint(state, date, scope);
   if (v.transactionFingerprint !== fingerprint) throw new Error('Today’s entries have changed. Review them before confirming.');
   if (fingerprint.length > 45000) throw new Error('There are too many entries for one check-in.');
-  return { id, date, scope, transactionFingerprint: fingerprint, confirmedAt: new Date().toISOString(), revision: (previous?.revision ?? 0) + 1 };
+  const now = new Date().toISOString();
+  return { id, date, scope, transactionFingerprint: fingerprint, confirmedAt: now, completedAt: now, completed: true, transactionsReviewed: JSON.parse(fingerprint).length, revision: (previous?.revision ?? 0) + 1 };
 }

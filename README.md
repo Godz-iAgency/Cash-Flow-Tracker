@@ -27,8 +27,8 @@ Open http://localhost:3001. No financial credentials are bundled in the frontend
 - **Dashboard:** recorded income, actual expenses, net cash flow, daily activity, planned totals, category spending, and recent entries.
 - **Transactions:** daily ledger, search, date and type filters, and edits with preserved previous versions.
 - **Budget:** every supplied expense item, planned versus actual, remaining amount, and monthly plan adjustments that leave other months intact.
-- **Accounts:** all five supplied accounts, manual balances, monthly inflows and outflows, and Personal / Business / All filters.
-- **Insights:** daily, weekly, and monthly spending; needs versus wants; average discretionary spending; purchases under $10; repeated merchants and categories; unplanned, miscellaneous, and snack spending.
+- **Accounts:** all five supplied accounts, dated balance snapshots with later recorded movements, monthly inflows and outflows, and Personal / Business / All filters.
+- **Insights:** daily, weekly, and monthly spending; needs versus wants; average discretionary spending; purchases under a configurable threshold (default $10); repeated merchants and categories; unplanned, miscellaneous, and snack spending.
 
 Phones use bottom navigation and a persistent Add transaction button. Tablets use a compact sidebar, while laptops and desktops use wider card layouts. Forms become bottom sheets on phones. Layouts include safe-area spacing, keyboard focus management, reduced-motion support, and print styles. Money is always displayed to two decimal places.
 
@@ -44,7 +44,7 @@ The repository and local workspace were empty. The provided attachment was the *
 
 These totals are derived from records, not hard-coded UI totals. Initial recorded income and expenses are zero: planned income is not a paycheck received. All five account balances are initially **unset**, because no balances were supplied. Business budgets and business planned income are not invented.
 
-The written plan becomes a recurring monthly template. A budget edit creates an override only for the selected month. All amounts use USD. The browser's local date/time determines entry defaults and calendar periods; weeks run Monday through today. Account balances are manually maintained snapshots, not automatically adjusted ledger balances. Credit-card balances represent amounts owed. Transfers affect account movement but never increase income, expenses, needs, or wants.
+The written plan becomes a recurring monthly template. A budget edit creates an override only for the selected month. All amounts use USD. The browser's local date/time determines entry defaults and calendar periods; weeks run Monday through today. Account balances start from manually entered bank snapshots and apply recorded movements after their financial timestamp. Unknown balances remain unknown. Credit-card balances represent amounts owed. Transfers affect account movement but never increase income, expenses, needs, or wants.
 
 ## Google Sheets setup
 
@@ -58,7 +58,7 @@ The written plan becomes a recurring monthly template. A budget edit creates an 
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 
-6. Restart the server. The app asks for your password before reading financial data. Its first authenticated read initializes the six original application tabs and the three additional action and check-in tabs.
+6. Restart the server. The app asks for your password before reading financial data. Its first authenticated read initializes the original application tabs and the additional action, allocation, settings, and review tabs.
 
 | Tab | Purpose |
 | --- | --- |
@@ -107,14 +107,14 @@ Previous and new costs are **comparable monthly amounts**. When both are supplie
 
 **Daily Financial Axiom** rotates through 28 original principles by the browser's local calendar date. Each has one axiom sentence, a two-sentence lesson, and an application question. The content covers ownership, cash flow, allocation, margin, liquidity, compounding, risk, and the other requested topics. It is stored locally in `shared/axioms.ts`; it does not require another Sheets tab, a model call, or transmission of financial history. Educational references are linked for relevant principles.
 
-**Financial check-in** always uses today and the current calendar month, even while another historical month is selected in the dashboard. Money in/out, net cash flow, recorded transaction count, current monthly spending, and remaining budget respect the selected money space. “Yes” records your confirmation of today's entries. A new or edited transaction makes that confirmation stale; prior confirmations remain in the audit history. “Review Transactions” opens the ledger filtered to today. Transfers are counted as recorded entries but excluded from income/spending.
+**Daily check-in** now reviews every account and classification together. The dashboard uses today even when a different month is selected. It shows income, spending, transfers, net cash flow, transaction count, monthly spending, and remaining budget. Only **Everything Is Recorded** completes the date. **Review Today** opens the dated ledger. Additions and edits invalidate the effective status while prior confirmations remain in history and audit.
 
 **Potential financial leaks** are deterministic review signals, not findings of billing errors:
 
 - A recurring merchant/service's monthly total at least 20% and $5 above its average across all three previous months.
 - Different amounts for the same merchant/service in one month.
 - Repeated equal subscription charges in one month, presented for billing-date/service review.
-- Five or more want purchases under $10 in one month.
+- Five or more want purchases below the configured small-purchase threshold in one month.
 - A recurring service appearing in the current month and at least two previous months without a matching planned item.
 - A category's monthly total at least 30% and $10 above its average across all three previous months.
 
@@ -130,6 +130,34 @@ On the next authenticated read after a server restart, the app creates only the 
 | `Daily_Checkins` | ID per date and money space, date, scope, confirmation timestamp, exact recorded transaction ID/revision snapshot, revision |
 | `Leak_Reviews` | Stable review/evidence ID, month, dismissal timestamp |
 
-New tab columns use snake_case. Money column names explicitly end in `_cents`; the original six tabs keep their existing names and headers. New records follow the same append-only and atomic audit-write approach. Browser data saved before this extension gains empty collections without replacing existing financial records. Full backups include the new records as well as the original history.
+New tab columns use snake_case. Money column names explicitly end in `_cents`; the original tab names and existing columns retain their meaning. The Accounts and Daily_Checkins tabs receive compatible columns appended to the right, without changing historical rows. New records follow the same append-only and atomic audit-write approach. Browser data saved before this extension gains empty collections without replacing existing financial records. Full backups include the new records as well as the original history.
 
 Reminders are shown **inside the app** when you open it. This version does not schedule system notifications, email, or background delivery. Restart the server after updating the source so the new endpoints and tab initialization are active.
+
+
+## Account allocation and reviews
+
+A transaction’s `scope` is its explicit Personal / Business classification. It is independent of its payment or destination account’s ownership. New entries must supply it; historical classifications are preserved, and corrections use the ordinary edit and audit flow. Income requires a source, destination, and category. Expenses require a merchant, payment account, category, and Need / Want. Internal transfers are single records with different source/destination accounts, and never become income or spending. A credit-card payment is a transfer, so the purchase and its later payment are not counted as two expenses.
+
+**Expense Funding** under Budget assigns each planned expense an expected amount, payment account, recurring due day, and autopay setting. Unassigned accounts remain **UNASSIGNED**. A recurring default can be overridden for one month; days beyond a month’s length fall on its last day. Setting funding does not change the budget or record payment. Selecting a funded budget item fills the transaction’s payment-account draft, while classification remains independently editable.
+
+**Accounts** shows the provided operating/reserve/card roles, ownership, current balance, monthly money in/out and net movement, and upcoming assigned expenses. A bank snapshot records an explicit local **Balance as of** timestamp and the stable IDs already recorded in that minute. Movements dated before the snapshot are already included, so logging a missed older purchase does not deduct it twice. Later movements adjust the balance, and edits to those movements recompute the adjustment once. Future-dated movements wait until their date/time. Existing snapshots use their original update timestamp and creation timestamps for compatibility. Dates/times have minute precision; recorded entries in the snapshot minute are included, while newly added entries in that minute are treated as later movements. Update the snapshot to reconcile with the bank. Cash-account balance increases with inflows; a credit-card balance owed decreases with inflows and increases with purchases. Credit balances and credit limits are not cash. Partial totals identify unknown balances and show a known subtotal. The balances depend on complete recorded entries; this is not a bank connection.
+
+**Money Flow** visually shows each recorded source/account, transfer between accounts, and expense/payee. It does not pretend to trace a particular incoming dollar through pooled funds. Saved income sources provide editable defaults for new drafts; editing a source does not rewrite historical income.
+
+**Check-In History** shows a full calendar for any selected month, including missing days and upcoming days. Historical dates can be reviewed and explicitly completed. The history records completion time, transaction count, and the exact transaction IDs/revisions reviewed. Global daily status uses the `All` check-in; legacy per-classification confirmations remain stored. A changed transaction requires another confirmation. Consecutive days can continue through yesterday while today is pending. Completed days include today if confirmed; missed counts exclude today and future days. Calendar dates without confirmations remain visible, including dates before the first recorded entry.
+
+**Tracker settings** sets a local reminder time (default 18:00) and a small-purchase threshold (default $10). An incomplete day shows “Today’s cash flow has not been reviewed.” inside the open app after that time. The state rechecks while the app is open and on focus. It does not send desktop or mobile notifications. Real push delivery would require an HTTPS deployment, a service worker, explicit user notification permission, saved push subscriptions, and a server scheduler with a configured timezone to check completion and send Web Push. None of those capabilities are claimed or simulated here.
+
+**Month-End Review** separates Personal / Business income and expenses, net cash flow, Need / Want, planned versus unplanned recorded spending, small purchases, transfers, largest categories, frequent merchants, active leak flags, and reported savings from actions completed in that month. Planned spending matches the budget category and subcategory within the same classification. Savings are a reported monthly change and annualized estimate, not realized cash receipts. Review notes target the following month and appear there; edits preserve an audit trail.
+
+Additional Sheets tables:
+
+| Tab | Stored records |
+| --- | --- |
+| `Income_Sources` | Stable ID, source name, classification, category, optional default destination, revision |
+| `Expense_Funding` | Stable ID, budget ID, month/default, optional payment account, expected cents, due day, autopay, revision |
+| `Settings` | Stable `app` ID, reminder time, small-purchase threshold in cents, revision |
+| `Month_Reviews` | Stable month/classification ID, note, following month, timestamps, revision |
+
+`accounts` adds `balanceIncludedTransactionIds` and `balanceAsOf`. `Daily_Checkins` adds `completed`, `completed_at`, and `transactions_reviewed`, retaining its original columns and `confirmed_at` for compatibility. The initializer accepts only the exact known legacy header prefixes, adds the missing rightmost headers, and leaves existing data rows intact. Prior check-in rows decode as explicit confirmations using their original timestamp and fingerprint count. All new saves append versioned records and an audit record in the same Sheets request. Connected saves refresh the latest state so balance projections include other recently recorded movements. No spreadsheet row number is used as an identifier.

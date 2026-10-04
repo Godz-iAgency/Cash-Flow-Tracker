@@ -10,7 +10,7 @@ async function add(page: Page, amount: string, merchant: string, type = 'Expense
   await dialog.getByRole('button', { name: type, exact: true }).click();
   await dialog.getByRole('textbox', { name: 'Amount', exact: true }).fill(amount);
   await dialog.locator('#merchant').fill(merchant);
-  if (account) await dialog.locator('#account').selectOption(account);
+  await dialog.locator('#account').selectOption(account ?? 'capital-one-checking');
   if (destination) await dialog.locator('#to-account').selectOption(destination);
   await dialog.getByRole('button', { name: 'Save transaction', exact: true }).click();
   await expect(dialog).toBeHidden();

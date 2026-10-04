@@ -21,6 +21,6 @@ export function initialState(): State {
     categories: [...new Set(plans.map(([category]) => category).concat(['Employment', 'Business income', 'Miscellaneous']))].map((name, i) => ({ id: `category-${i + 1}`, name })),
     budgets: plans.map(([category, label, amountCents], i) => ({ id: `budget-${i + 1}`, label, category, amountCents, scope: 'Personal', month: '*' })),
     income: [{ id: 'planned-income', label: 'Budgeted monthly income', amountCents: 260000, scope: 'Personal', month: '*' }],
-    transactions: [], audit: [], notesReminders: [], dailyCheckIns: [], leakReviews: [],
+    transactions: [], audit: [], notesReminders: [], dailyCheckIns: [], leakReviews: [], expenseFunding: [], settings: [], monthReviews: [], incomeSources: [{ id: 'employment', name: 'Employment', scope: 'Personal', category: 'Employment', defaultAccountId: 'capital-one-checking', revision: 1, updatedAt: '' }],
   };
 }

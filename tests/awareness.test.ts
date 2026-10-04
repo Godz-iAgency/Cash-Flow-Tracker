@@ -6,7 +6,7 @@ import { actionSummary, dueActions, extendState, transactionFingerprint, validat
 import { axioms, dailyAxiom } from '../shared/axioms';
 import { detectLeaks } from '../shared/leaks';
 const actionDraft = (overrides: Record<string, unknown> = {}) => ({ id: 'action-1', title: 'Review Spectrum bill', note: 'Call to review the amount.', category: 'Bill Review', priority: 'High', status: 'Open', scope: 'Personal', relatedExpenseId: 'budget:budget-8', relatedAccountId: 'capital-one-checking', reminderDate: '2026-10-03', amountAffectedCents: 9000, previousCostCents: 9000, newCostCents: 7000, monthlySavingsCents: null, ...overrides });
-const transaction = (id: string, date: string, amountCents: number, overrides: Record<string, unknown> = {}) => validateTransaction({ id, date, time: '12:00', type: 'Expense', amountCents, merchant: 'Spectrum', description: '', category: 'Utilities', subcategory: 'Internet', accountId: 'capital-one-checking', toAccountId: '', classification: 'Need', notes: '', ...overrides }, initialState());
+const transaction = (id: string, date: string, amountCents: number, overrides: Record<string, unknown> = {}) => validateTransaction({ id, date, time: '12:00', type: 'Expense', amountCents, merchant: 'Spectrum', description: '', category: 'Utilities', subcategory: 'Internet', accountId: 'capital-one-checking', toAccountId: '', classification: 'Need', scope: 'Personal', notes: '', ...overrides }, initialState());
 test('legacy data gains new collections without changing financial records', () => {
   const original = initialState(); original.transactions = [transaction('existing', '2026-10-03', 10)];
   const { notesReminders, dailyCheckIns, leakReviews, ...legacy } = original;
@@ -65,7 +65,7 @@ test('check-ins are per day and scope, include transfers, and become stale on ad
 });
 test('bill comparisons require all three prior months and never mix business with personal', () => {
   const state = initialState();
-  state.transactions = [transaction('jul', '2026-07-01', 7000), transaction('aug', '2026-08-01', 7000), transaction('sep', '2026-09-01', 7000), transaction('oct', '2026-10-01', 9200), transaction('business', '2026-10-02', 99999, { accountId: 'chase-savings' })];
+  state.transactions = [transaction('jul', '2026-07-01', 7000), transaction('aug', '2026-08-01', 7000), transaction('sep', '2026-09-01', 7000), transaction('oct', '2026-10-01', 9200), transaction('business', '2026-10-02', 99999, { accountId: 'chase-savings', scope: 'Business' })];
   const leak = detectLeaks(state, '2026-10', 'Personal').find(l => l.title === 'Recurring cost increased')!;
   assert.match(leak.message, /\$70\.00/); assert.match(leak.message, /\$92\.00/); assert.equal(leak.amountAffectedCents, 2200);
   assert.equal(leak.transactions.length, 4); assert.equal(detectLeaks(state, '2026-10', 'Business').length, 0);

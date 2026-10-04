@@ -56,16 +56,16 @@ test('financial action saves, completes, stays in history, and leaves cash flow 
 });
 test('check-in persists, becomes unconfirmed after a new entry, and opens today’s ledger', async ({ page }) => {
   await open(page);
-  const checkIn = page.locator('.check-in-card'); await checkIn.getByRole('button', { name: 'Yes', exact: true }).click();
-  await expect(checkIn.getByRole('button', { name: 'Confirmed' })).toBeDisabled();
-  await page.reload(); await expect(checkIn.getByRole('button', { name: 'Confirmed' })).toBeDisabled();
+  const checkIn = page.locator('.check-in-card'); await checkIn.getByRole('button', { name: 'Everything Is Recorded', exact: true }).click();
+  await expect(checkIn.getByRole('button', { name: 'Complete', exact: true })).toBeDisabled();
+  await page.reload(); await expect(checkIn.getByRole('button', { name: 'Complete', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click();
-  const form = page.getByRole('dialog'); await form.getByRole('textbox', { name: 'Amount', exact: true }).fill('0.10'); await form.locator('#merchant').fill('New recorded purchase');
+  const form = page.getByRole('dialog'); await form.getByRole('textbox', { name: 'Amount', exact: true }).fill('0.10'); await form.locator('#merchant').fill('New recorded purchase'); await form.locator('#account').selectOption('capital-one-checking');
   await form.getByRole('button', { name: 'Save transaction' }).click(); await expect(form).toBeHidden();
-  await expect(checkIn.getByRole('button', { name: 'Yes', exact: true })).toBeEnabled();
+  await expect(checkIn.getByRole('button', { name: 'Everything Is Recorded', exact: true })).toBeEnabled();
   await expect(checkIn).toContainText('Today’s entries changed');
   await expect(checkIn.locator('.check-in-values')).toContainText('$0.10');
-  await checkIn.getByRole('button', { name: 'Review Transactions' }).click();
+  await checkIn.getByRole('button', { name: 'Review Today', exact: true }).click();
   await expect(page.getByLabel('Filter ledger date')).toHaveValue(today);
   await expect(page.getByText('New recorded purchase', { exact: true })).toBeVisible();
 });
@@ -73,7 +73,7 @@ test('legacy data survives migration, and a bill flag creates an editable remind
   const seed = initialState(), month = today.slice(0, 7);
   seed.transactions = [0, 1, 2, 3].map(i => {
     const date = new Date(`${month}-15T12:00:00`); date.setMonth(date.getMonth() - i);
-    return validateTransaction({ id: `spectrum-${i}`, date: localDate(date).slice(0, 7) + '-01', time: '12:00', type: 'Expense', amountCents: i === 0 ? 9200 : 7000, merchant: 'Spectrum', description: '', category: 'Utilities', subcategory: 'Internet', accountId: 'capital-one-checking', toAccountId: '', classification: 'Need', notes: '' }, seed);
+    return validateTransaction({ id: `spectrum-${i}`, date: localDate(date).slice(0, 7) + '-01', time: '12:00', type: 'Expense', amountCents: i === 0 ? 9200 : 7000, merchant: 'Spectrum', description: '', category: 'Utilities', subcategory: 'Internet', accountId: 'capital-one-checking', toAccountId: '', classification: 'Need', scope: 'Personal', notes: '' }, seed);
   });
   const { notesReminders, dailyCheckIns, leakReviews, ...legacy } = seed;
   await page.addInitScript(data => { if (!localStorage.getItem('cash-flow-tracker-v1')) localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(data)); }, legacy);

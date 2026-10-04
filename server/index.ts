@@ -6,12 +6,13 @@ import { fileURLToPath } from 'node:url';
 import { configured, mutate, readState, writeRecords } from './sheets';
 import { validateTransaction } from '../shared/model';
 import { validateAction, validateCheckIn } from '../shared/actions';
+import { balanceSnapshotIds, validSnapshot, validateFunding, validateIncomeSource, validateMonthReview, validateSettings } from '../shared/allocation';
 import { detectLeaks } from '../shared/leaks';
 
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 'loopback');
-app.use(express.json({ limit: '32kb' }));
+app.use(express.json({ limit: '128kb' }));
 const production = process.env.NODE_ENV === 'production';
 const secret = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
 if (configured() && (!process.env.APP_PASSWORD || !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
@@ -76,7 +77,9 @@ app.post('/api/accounts/:id/balance', async (req, res) => {
     if (!before) throw new Error('Account was not found.');
     const balance = req.body?.balanceCents;
     if (!Number.isSafeInteger(balance) || Math.abs(balance) > 99999999999) throw new Error('Enter a valid balance in cents.');
-    const after = { ...before, balanceCents: balance, balanceUpdatedAt: new Date().toISOString() };
+    const asOf = req.body.balanceAsOf ?? null;
+    if (asOf !== null && !validSnapshot(asOf)) throw new Error('Choose a valid date and time for this balance snapshot.');
+    const after = { ...before, balanceAsOf: asOf, balanceIncludedTransactionIds: asOf === null ? null : balanceSnapshotIds(state.transactions, asOf), balanceCents: balance, balanceUpdatedAt: new Date().toISOString() };
     await writeRecords([{ table: 'accounts', records: [after] }, { table: 'audit', records: [{ id: randomUUID(), entity: 'account', entityId: after.id, at: after.balanceUpdatedAt, before, after }] }]);
     return after;
   });
@@ -126,6 +129,16 @@ app.post('/api/leak-reviews', async (req, res) => {
   });
   res.json(result);
 });
+const extensions = { 'expense-funding': { table: 'expenseFunding', validate: validateFunding }, 'income-sources': { table: 'incomeSources', validate: validateIncomeSource }, settings: { table: 'settings', validate: validateSettings }, 'month-reviews': { table: 'monthReviews', validate: validateMonthReview } } as const;
+for (const [route, extension] of Object.entries(extensions)) app.post(`/api/${route}`, async (req, res) => {
+  const result = await mutate(async () => {
+    const state = await readState(), after = extension.validate(req.body, state);
+    const before = state[extension.table].find(r => r.id === after.id) ?? null;
+    await writeRecords([{ table: extension.table, records: [after] }, { table: 'audit', records: [{ id: randomUUID(), entity: route, entityId: after.id, at: after.updatedAt, before, after }] }]);
+    return after;
+  });
+  res.json(result);
+});
 app.post('/api/ai/draft', async (req, res) => {
   if (!process.env.GEMINI_API_KEY) { res.status(503).json({ error: 'Gemini is not configured. Use the quick-entry form.' }); return; }
   if (typeof req.body?.text !== 'string' || !req.body.text.trim() || req.body.text.length > 2000) throw new Error('Enter a description of up to 2,000 characters.');
@@ -133,7 +146,7 @@ app.post('/api/ai/draft', async (req, res) => {
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env.GEMINI_MODEL || 'gemini-2.5-flash')}:generateContent`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: `Interpret a transaction as a DRAFT. Never invent missing amounts, merchants, accounts, dates or classifications. Return JSON: type (Expense/Income/Transfer), amount (a dollar string with 2 decimals), merchant, category, subcategory, accountId, toAccountId, classification (Need/Want), date, time, notes, uncertainties (array of strings). Omit unknown fields and list them in uncertainties. Today's local date: ${req.body.date}. Categories: ${JSON.stringify(state.categories)}. Accounts: ${JSON.stringify(state.accounts.map(({ id, name, lastFour, scope }) => ({ id, name, lastFour, scope })))}. Budget items: ${JSON.stringify(state.budgets.map(({ label, category }) => ({ label, category })))}.` }] },
+      systemInstruction: { parts: [{ text: `Interpret a transaction as a DRAFT. Never invent missing amounts, merchants, accounts, dates or classifications. Return JSON: type (Expense/Income/Transfer), amount (a dollar string with 2 decimals), merchant, category, subcategory, accountId, toAccountId, classification (Need/Want), scope (Personal/Business, independent of the account), date, time, notes, uncertainties (array of strings). Omit unknown fields and list them in uncertainties. Today's local date: ${req.body.date}. Categories: ${JSON.stringify(state.categories)}. Accounts: ${JSON.stringify(state.accounts.map(({ id, name, lastFour, scope }) => ({ id, name, lastFour, scope })))}. Budget items: ${JSON.stringify(state.budgets.map(({ label, category }) => ({ label, category })))}.` }] },
       contents: [{ role: 'user', parts: [{ text: req.body.text }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.1 },
     }), signal: AbortSignal.timeout(30000),

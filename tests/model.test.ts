@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState } from '../shared/seed';
 import { accountFlows, budgetSpent, monthBudgets, monthIncome, parseCents, scopedTransactions, summarize, validateTransaction, type Transaction } from '../shared/model';
-const draft = (overrides: Record<string, unknown> = {}) => ({ id: 'transaction-1', type: 'Expense', amountCents: 10, date: '2026-10-03', time: '09:15', category: 'Food', subcategory: 'Grocery', merchant: 'H-E-B', description: '', accountId: 'capital-one-checking', toAccountId: '', classification: 'Need', notes: '', ...overrides });
+const draft = (overrides: Record<string, unknown> = {}) => ({ id: 'transaction-1', type: 'Expense', amountCents: 10, date: '2026-10-03', time: '09:15', category: 'Food', subcategory: 'Grocery', merchant: 'H-E-B', description: '', accountId: 'capital-one-checking', toAccountId: '', classification: 'Need', scope: 'Personal', notes: '', ...overrides });
 test('supplied monthly baseline is calculated exactly from records', () => {
   const state = initialState();
   assert.equal(monthBudgets(state, '2026-10', 'Personal').reduce((n, b) => n + b.amountCents, 0), 256930);
@@ -34,9 +34,9 @@ test('transfers affect both account flows without inflating income or expenses',
   assert.equal(scopedTransactions(state, '2026-10', 'All').length, 1);
   assert.throws(() => validateTransaction(draft({ type: 'Transfer', toAccountId: 'capital-one-checking' }), state));
 });
-test('derives scope from account and separates personal and business reports', () => {
+test('keeps classification independent of payment account in personal and business reports', () => {
   const state = initialState();
-  state.transactions = [validateTransaction(draft({ scope: 'Business' }), state), validateTransaction(draft({ id: 'business', accountId: 'chase-unlimited', amountCents: 4000 }), state)];
+  state.transactions = [validateTransaction(draft({ accountId: 'chase-savings', scope: 'Personal' }), state), validateTransaction(draft({ id: 'business', scope: 'Business', accountId: 'capital-one-checking', amountCents: 4000 }), state)];
   assert.equal(state.transactions[0].scope, 'Personal');
   assert.equal(summarize(scopedTransactions(state, '2026-10', 'Personal')).expenses, 10);
   assert.equal(summarize(scopedTransactions(state, '2026-10', 'Business')).expenses, 4000);
