@@ -31,7 +31,7 @@ export function Modal({ title, subtitle, children, onClose, wide = false }: { ti
     document.addEventListener('keydown', handle);
     return () => { cancelAnimationFrame(frame); document.removeEventListener('keydown', handle); previous?.focus(); };
   }, []);
-  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div ref={ref} className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}><div className="modal-heading"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={21} /></button></div>{children}</div></div>;
+  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div ref={ref} className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}><div className="modal-heading"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={21} /></button></div><div className="modal-content" tabIndex={0} role="region" aria-label={`${title} content`}>{children}</div></div></div>;
 }
 export function TransactionList({ transactions, state, onEdit, compact = false }: { transactions: Transaction[]; state: State; onEdit: (t: Transaction) => void; compact?: boolean }) {
   return <div className={`transaction-list ${compact ? 'compact' : ''}`}>

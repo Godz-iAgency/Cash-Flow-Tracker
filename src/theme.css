@@ -381,7 +381,13 @@ body { overflow-wrap: anywhere; }
 html { min-height: 100%; overflow-y: auto !important; scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 body { min-height: 100dvh; overflow-y: auto !important; touch-action: pan-x pan-y pinch-zoom; }
 html:has(.modal-backdrop), body:has(.modal-backdrop) { overflow-y: hidden !important; }
-.modal { overflow-y: auto; touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch; }
+.modal { display: flex; flex-direction: column; overflow: hidden; touch-action: pan-y pinch-zoom; }
+.modal-heading { position: static; flex: 0 0 auto; }
+.modal-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch; scrollbar-color: #789b4c #171d13; scrollbar-width: thin; scroll-padding: 12px 0 90px; }
+.settings-storage { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+.settings-storage h3 { font-size: 1rem; }
+.settings-storage .help-actions { margin-top: 12px; }
+.settings-storage .button { flex: 1 1 12rem; }
 .extension-nav, .mobile-nav { touch-action: pan-x pan-y pinch-zoom; -webkit-overflow-scrolling: touch; }
 .sidebar { overflow-y: auto; -webkit-overflow-scrolling: touch; }
-@media print { html, body { overflow: visible !important; } }
+@media print { html, body { overflow: visible !important; } .modal, .modal-content { display: block; overflow: visible; max-height: none; } }

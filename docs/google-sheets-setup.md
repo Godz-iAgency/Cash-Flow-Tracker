@@ -4,7 +4,7 @@ The app already has a Google Sheets database integration. It uses a service acco
 
 ## 1. Preserve current entries
 
-In the app, choose **Export backup** before connecting anything. Keep that downloaded backup. On-device records are not automatically transferred into Google Sheets. If you have entries to keep, we will review the backup and plan the transfer before switching storage modes. Do not clear browser data.
+In the app, choose **Settings → Export full backup** before connecting anything. The same export is available through **Storage & backup** and the page footer. Keep that downloaded backup. On-device records are not automatically transferred into Google Sheets. If you have entries to keep, we will review the backup and plan the transfer before switching storage modes. Do not clear browser data.
 
 ## 2. Make the database file
 

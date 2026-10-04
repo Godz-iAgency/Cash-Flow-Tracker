@@ -184,6 +184,6 @@ Body text and primary controls use 16px at default settings, supporting details 
 
 ## Scrolling and guided Sheets setup
 
-Pages support native wheel, trackpad and touch scrolling. Forms scroll inside their dialog while the page is locked; the lock follows the dialog's presence and disappears when it closes. Review menus and enlarged-text bottom navigation also scroll horizontally. Reload the app after updating to load the current files. In desktop device emulators, use the wheel/trackpad inside the page; mouse dragging depends on the emulator's gesture controls.
+Pages support native wheel, trackpad and touch scrolling. Dialogs keep the close button visible above a scrollable content region with wheel, touch and keyboard support. The page lock follows the dialog's presence and disappears when it closes. Settings includes **Export full backup** and **Storage & connection**. Review menus and enlarged-text bottom navigation also scroll horizontally. Reload the app after updating to load the current files. In desktop device emulators, use the wheel/trackpad inside the page; mouse dragging depends on the emulator's gesture controls.
 
 See the [guided Google Sheets setup](docs/google-sheets-setup.md) to connect the existing database integration. Export a backup first: on-device entries do not automatically migrate when Sheets is enabled. Keep downloaded service account credentials outside the repository and provide their local path instead of pasting secret contents.
