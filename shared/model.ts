@@ -1,3 +1,4 @@
+import type { BalanceReconciliation } from './reconciliation';
 import type { ExpenseFunding, IncomeSource, MonthReview, TrackerSettings } from './allocation';
 import type { DailyCheckIn, FinancialAction, LeakReview } from './actions';
 export type Scope = 'Personal' | 'Business';
@@ -25,7 +26,7 @@ export interface Audit { id: string; entity: string; entityId: string; at: strin
 export interface State {
   accounts: Account[]; categories: Category[]; budgets: Budget[];
   income: PlannedIncome[]; transactions: Transaction[]; audit: Audit[];
-  notesReminders: FinancialAction[]; dailyCheckIns: DailyCheckIn[]; leakReviews: LeakReview[]; expenseFunding: ExpenseFunding[]; incomeSources: IncomeSource[]; settings: TrackerSettings[]; monthReviews: MonthReview[];
+  notesReminders: FinancialAction[]; dailyCheckIns: DailyCheckIn[]; leakReviews: LeakReview[]; expenseFunding: ExpenseFunding[]; incomeSources: IncomeSource[]; settings: TrackerSettings[]; monthReviews: MonthReview[]; balanceReconciliations: BalanceReconciliation[];
 }
 export const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 export function parseCents(input: string): number {

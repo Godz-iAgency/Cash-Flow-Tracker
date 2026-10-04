@@ -21,7 +21,7 @@ test('private Sheets endpoints require authentication and reject cross-origin wr
     });
     const root = `http://127.0.0.1:${port}/api/`;
     assert.equal((await fetch(`${root}state`)).status, 401);
-    for (const endpoint of ['actions', 'check-ins', 'leak-reviews', 'expense-funding', 'income-sources', 'settings', 'month-reviews']) {
+    for (const endpoint of ['actions', 'check-ins', 'leak-reviews', 'expense-funding', 'income-sources', 'settings', 'month-reviews', 'balance-reconciliations']) {
       assert.equal((await fetch(root + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 401);
     }
     const invalid = await fetch(`${root}login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: 'wrong' }) });
@@ -33,6 +33,7 @@ test('private Sheets endpoints require authentication and reject cross-origin wr
     const login = await fetch(`${root}login`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: `http://127.0.0.1:${port}` }, body: JSON.stringify({ password: 'test-password-only' }) });
     assert.equal(login.status, 200);
     const cookie = login.headers.get('set-cookie')!;
+    assert.equal((await fetch(root + 'balance-reconciliations', { method: 'POST', headers: { Cookie: cookie.split(';')[0], 'Content-Type': 'application/json', Origin: 'https://untrusted.example' }, body: '{}' })).status, 403);
     assert.match(cookie, /HttpOnly/); assert.match(cookie, /SameSite=Strict/);
     const authenticated = await fetch(`${root}status`, { headers: { Cookie: cookie.split(';')[0] } });
     assert.equal((await authenticated.json()).authenticated, true);

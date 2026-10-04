@@ -79,11 +79,11 @@ test('monthly budget edits and manually maintained account balances', async ({ p
   await page.getByRole('button', { name: 'All', exact: true }).click();
   await expect(page.locator('.account-card')).toHaveCount(5);
   const account = page.locator('.account-card').filter({ hasText: 'Capital One Personal Checking' });
-  await expect(account.getByText('Not set', { exact: true })).toBeVisible();
+  await expect(account.locator('.account-balance strong')).toHaveText('Not set');
   await account.getByRole('button', { name: 'Update balance' }).click();
   await page.getByRole('dialog').locator('#edit-value').fill('123.45');
   await page.getByRole('dialog').getByRole('button', { name: 'Save changes' }).click();
-  await expect(account.getByText('$123.45', { exact: true })).toBeVisible();
+  await expect(account.locator('.account-balance strong')).toHaveText('$123.45');
 });
 test('populated ledger handles long labels, cents, and every screen on a narrow phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 }); await open(page);

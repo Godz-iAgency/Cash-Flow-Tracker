@@ -205,3 +205,20 @@
   .source-list > div { align-items: flex-start; }
   .source-list .text-button { flex-shrink: 0; }
 }
+
+.reconciliation-panel { margin: 20px 0; padding-top: 20px; border-top: 1px solid #dfe5dc; }
+.reconciliation-panel h3 { font-size: 14px; margin-bottom: 12px; }
+.balance-equation dl, .saved-comparison dl { margin: 12px 0; font-size: 12px; }
+.balance-equation dl > div, .saved-comparison dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 9px 0; }
+.balance-equation dt, .saved-comparison dt { min-width: 0; overflow-wrap: anywhere; }
+.balance-equation dd, .saved-comparison dd { margin: 0; font-weight: 650; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.calculated-row { padding-top: 9px; border-top: 1px solid #dfe5dc; }
+.reconciliation-status { border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.reconciliation-status.matched { background: #edf4e9; color: #3c5d35; }
+.reconciliation-status.review-needed { background: #fff1e6; color: #934622; }
+.saved-comparison { margin: 14px 0; }
+.comparison-note { font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.comparison-history { margin: 16px 0; font-size: 12px; }
+.comparison-history summary { cursor: pointer; overflow-wrap: anywhere; line-height: 1.7; }
+.comparison-history > details { padding: 12px 0; border-bottom: 1px solid #dfe5dc; }
+@media (max-width: 540px) { .balance-equation dl, .saved-comparison dl { font-size: 11px; } }

@@ -7,6 +7,7 @@ import { configured, mutate, readState, writeRecords } from './sheets';
 import { validateTransaction } from '../shared/model';
 import { validateAction, validateCheckIn } from '../shared/actions';
 import { balanceSnapshotIds, validSnapshot, validateFunding, validateIncomeSource, validateMonthReview, validateSettings } from '../shared/allocation';
+import { validateReconciliation } from '../shared/reconciliation';
 import { detectLeaks } from '../shared/leaks';
 
 const app = express();
@@ -129,7 +130,7 @@ app.post('/api/leak-reviews', async (req, res) => {
   });
   res.json(result);
 });
-const extensions = { 'expense-funding': { table: 'expenseFunding', validate: validateFunding }, 'income-sources': { table: 'incomeSources', validate: validateIncomeSource }, settings: { table: 'settings', validate: validateSettings }, 'month-reviews': { table: 'monthReviews', validate: validateMonthReview } } as const;
+const extensions = { 'balance-reconciliations': { table: 'balanceReconciliations', validate: validateReconciliation }, 'expense-funding': { table: 'expenseFunding', validate: validateFunding }, 'income-sources': { table: 'incomeSources', validate: validateIncomeSource }, settings: { table: 'settings', validate: validateSettings }, 'month-reviews': { table: 'monthReviews', validate: validateMonthReview } } as const;
 for (const [route, extension] of Object.entries(extensions)) app.post(`/api/${route}`, async (req, res) => {
   const result = await mutate(async () => {
     const state = await readState(), after = extension.validate(req.body, state);

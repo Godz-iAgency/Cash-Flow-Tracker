@@ -17,9 +17,10 @@ const headers: Record<Table, string[]> = {
   incomeSources: ['id', 'name', 'scope', 'category', 'defaultAccountId', 'updatedAt', 'revision'],
   settings: ['id', 'reminderTime', 'smallPurchaseThresholdCents', 'updatedAt', 'revision'],
   monthReviews: ['id', 'month', 'scope', 'note', 'nextMonth', 'createdAt', 'updatedAt', 'revision'],
+  balanceReconciliations: ['id', 'accountId', 'accountType', 'asOf', 'actualBalanceCents', 'openingBalanceCents', 'openingAsOf', 'moneyInCents', 'moneyOutCents', 'calculatedBalanceCents', 'differenceCents', 'ledgerFingerprint', 'note', 'createdAt', 'updatedAt', 'revision'],
 };
 const names = Object.keys(headers) as Table[];
-const sheetName = (table: Table) => ({ notesReminders: 'Notes_Reminders', dailyCheckIns: 'Daily_Checkins', leakReviews: 'Leak_Reviews', expenseFunding: 'Expense_Funding', incomeSources: 'Income_Sources', settings: 'Settings', monthReviews: 'Month_Reviews' } as Partial<Record<Table, string>>)[table] ?? table;
+const sheetName = (table: Table) => ({ notesReminders: 'Notes_Reminders', dailyCheckIns: 'Daily_Checkins', leakReviews: 'Leak_Reviews', expenseFunding: 'Expense_Funding', incomeSources: 'Income_Sources', settings: 'Settings', monthReviews: 'Month_Reviews', balanceReconciliations: 'Balance_Reconciliations' } as Partial<Record<Table, string>>)[table] ?? table;
 const columnName = (table: Table, name: string) => !['accounts', 'categories', 'budgets', 'income', 'transactions', 'audit'].includes(table) ? name.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`) : name;
 const sheetHeaders = (table: Table) => headers[table].map(name => columnName(table, name));
 let ids: Partial<Record<Table, number>> = {};

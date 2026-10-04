@@ -21,14 +21,17 @@ export function validSnapshot(asOf: unknown): asOf is string {
 }
 // A bank snapshot already includes older movements, even when those are logged later.
 // Recorded entries in its minute are also included; new entries in that minute are movements.
-export function currentBalance(state: State, account: Account, now = localMinute()): number | null {
-  if (account.balanceCents === null) return null;
+export function balanceBreakdown(state: State, account: Account, now = localMinute()) {
   const asOf = account.balanceAsOf || (account.balanceUpdatedAt ? localMinute(new Date(account.balanceUpdatedAt)) : '');
   const included: string[] = account.balanceIncludedTransactionIds ? JSON.parse(account.balanceIncludedTransactionIds) : state.transactions.filter(t => t.createdAt <= (account.balanceUpdatedAt ?? '')).map(t => t.id);
   const known = new Set(included);
   const eligible = state.transactions.filter(t => { const at = `${t.date}T${t.time}`; return at <= now && (at > asOf || (at === asOf && !known.has(t.id))); });
   const flows = accountFlows(account.id, eligible), change = flows.inflows - flows.outflows;
-  return account.balanceCents + (account.type === 'Credit card' ? -change : change);
+  const comparable = account.balanceCents !== null && now >= asOf;
+  return { openingCents: account.balanceCents, openingAsOf: asOf, inflows: flows.inflows, outflows: flows.outflows, transactions: eligible.filter(t => t.accountId === account.id || t.toAccountId === account.id), calculatedCents: comparable ? account.balanceCents! + (account.type === 'Credit card' ? -change : change) : null };
+}
+export function currentBalance(state: State, account: Account, now = localMinute()): number | null {
+  return balanceBreakdown(state, account, now).calculatedCents;
 }
 export function cashTotals(state: State, now = localMinute()) {
   const sum = (scope: Scope | 'All', credit: boolean) => { const accounts = state.accounts.filter(a => (scope === 'All' || a.scope === scope) && (a.type === 'Credit card') === credit); const values = accounts.map(a => currentBalance(state, a, now)); return { amountCents: values.reduce<number>((n, v) => n + (v ?? 0), 0), unknown: values.filter(v => v === null).length }; };

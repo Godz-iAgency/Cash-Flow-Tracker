@@ -17,9 +17,9 @@ export function extendState(input: unknown): State {
   if (!input || typeof input !== 'object') throw new Error('Saved data could not be read.');
   const data = input as Record<string, unknown>;
   for (const key of ['accounts', 'categories', 'budgets', 'income', 'transactions', 'audit']) if (!Array.isArray(data[key])) throw new Error('Your saved financial data could not be read. Recover it before continuing.');
-  for (const key of ['notesReminders', 'dailyCheckIns', 'leakReviews', 'expenseFunding', 'incomeSources', 'settings', 'monthReviews']) if (data[key] !== undefined && !Array.isArray(data[key])) throw new Error('Your saved action data could not be read. Recover it before continuing.');
+  for (const key of ['notesReminders', 'dailyCheckIns', 'leakReviews', 'expenseFunding', 'incomeSources', 'settings', 'monthReviews', 'balanceReconciliations']) if (data[key] !== undefined && !Array.isArray(data[key])) throw new Error('Your saved action data could not be read. Recover it before continuing.');
   // Add only new, empty collections to legacy data; preserve every existing record.
-  return { ...data, notesReminders: data.notesReminders ?? [], dailyCheckIns: data.dailyCheckIns ?? [], leakReviews: data.leakReviews ?? [], expenseFunding: data.expenseFunding ?? [], incomeSources: data.incomeSources ?? [], settings: data.settings ?? [], monthReviews: data.monthReviews ?? [] } as unknown as State;
+  return { ...data, notesReminders: data.notesReminders ?? [], dailyCheckIns: data.dailyCheckIns ?? [], leakReviews: data.leakReviews ?? [], expenseFunding: data.expenseFunding ?? [], incomeSources: data.incomeSources ?? [], settings: data.settings ?? [], monthReviews: data.monthReviews ?? [], balanceReconciliations: data.balanceReconciliations ?? [] } as unknown as State;
 }
 export function validDate(date: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(`${date}T12:00:00Z`)) && new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) === date;

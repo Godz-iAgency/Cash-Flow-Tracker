@@ -4,6 +4,7 @@ import { JWT } from 'google-auth-library';
 import { initialState } from '../shared/seed';
 import { validateTransaction } from '../shared/model';
 import { validateFunding, validateMonthReview, validateSettings } from '../shared/allocation';
+import { validateReconciliation, reconciliationFingerprint } from '../shared/reconciliation';
 import { validateAction } from '../shared/actions';
 
 test('Sheets extension adds only new tabs and preserves existing schemas, records, and append-only history', async () => {
@@ -43,7 +44,7 @@ test('Sheets extension adds only new tabs and preserves existing schemas, record
       for (const request of requests) {
         if (request.addSheet) {
           const title = request.addSheet.properties.title;
-          assert.ok(['Notes_Reminders', 'Daily_Checkins', 'Leak_Reviews', 'Expense_Funding', 'Income_Sources', 'Settings', 'Month_Reviews'].includes(title));
+          assert.ok(['Notes_Reminders', 'Daily_Checkins', 'Leak_Reviews', 'Expense_Funding', 'Income_Sources', 'Settings', 'Month_Reviews', 'Balance_Reconciliations'].includes(title));
           const id = sheets.size + 1; sheets.set(title, { id, rows: [] });
           replies.push({ addSheet: { properties: { title, sheetId: id } } });
         } else if (request.updateCells) {
@@ -79,11 +80,19 @@ test('Sheets extension adds only new tabs and preserves existing schemas, record
     assert.deepEqual(state.notesReminders, []); assert.equal(state.dailyCheckIns[0].completed, true); assert.equal(state.dailyCheckIns[0].transactionsReviewed, 0); assert.deepEqual(state.leakReviews, []);
     assert.ok(sheets.get('Notes_Reminders')!.rows[0].includes('amount_affected_cents'));
     assert.ok(sheets.get('Notes_Reminders')!.rows[0].includes('annualized_savings_cents'));
+    assert.deepEqual(state.balanceReconciliations, []);
+    assert.deepEqual(sheets.get('Balance_Reconciliations')!.rows[0], ['id', 'account_id', 'account_type', 'as_of', 'actual_balance_cents', 'opening_balance_cents', 'opening_as_of', 'money_in_cents', 'money_out_cents', 'calculated_balance_cents', 'difference_cents', 'ledger_fingerprint', 'note', 'created_at', 'updated_at', 'revision']);
+    const comparison = validateReconciliation({ id: 'comparison-1', accountId: state.accounts[0].id, asOf: '2026-10-03T12:00', actualBalanceCents: 12345, note: '=A1', ledgerFingerprint: reconciliationFingerprint(state, state.accounts[0], '2026-10-03T12:00') }, state, '2026-10-03T12:00');
+    await writeRecords([{ table: 'balanceReconciliations', records: [comparison] }, { table: 'audit', records: [{ id: 'compare-audit', entity: 'balance-reconciliations', entityId: comparison.id, at: comparison.createdAt, before: null, after: comparison }] }]);
+    assert.equal(batches.at(-1)!.length, 2);
+    const compared = await readState();
+    assert.deepEqual(compared.balanceReconciliations, [comparison]); assert.deepEqual(compared.transactions, state.transactions); assert.deepEqual(compared.accounts, state.accounts);
+    assert.equal(compared.balanceReconciliations[0].calculatedBalanceCents, null); assert.equal(compared.balanceReconciliations[0].differenceCents, null);
     const action = validateAction({ id: 'action-1', title: '=A1', note: 'A literal financial note', category: 'Negotiation', priority: 'High', status: 'Open', scope: 'Personal', relatedExpenseId: '', relatedAccountId: '', reminderDate: '', previousCostCents: 9000, newCostCents: 7000, amountAffectedCents: null, monthlySavingsCents: null }, state);
     const audit = { id: 'audit-1', entity: 'financial action', entityId: action.id, at: action.updatedAt, before: null, after: action };
     await writeRecords([{ table: 'notesReminders', records: [action] }, { table: 'audit', records: [audit] }]);
     assert.equal(batches.at(-1)!.length, 2);
-    const after = await readState(); assert.deepEqual(after.notesReminders, [action]); assert.deepEqual(after.audit, [audit]);
+    const after = await readState(); assert.deepEqual(after.notesReminders, [action]); assert.deepEqual(after.audit, [...compared.audit, audit]);
     const completed = validateAction({ ...action, status: 'Completed' }, after, action);
     await writeRecords([{ table: 'notesReminders', records: [completed] }]);
     assert.equal(sheets.get('Notes_Reminders')!.rows.length, 3);

@@ -161,3 +161,13 @@ Additional Sheets tables:
 | `Month_Reviews` | Stable month/classification ID, note, following month, timestamps, revision |
 
 `accounts` adds `balanceIncludedTransactionIds` and `balanceAsOf`. `Daily_Checkins` adds `completed`, `completed_at`, and `transactions_reviewed`, retaining its original columns and `confirmed_at` for compatibility. The initializer accepts only the exact known legacy header prefixes, adds the missing rightmost headers, and leaves existing data rows intact. Prior check-in rows decode as explicit confirmations using their original timestamp and fingerprint count. All new saves append versioned records and an audit record in the same Sheets request. Connected saves refresh the latest state so balance projections include other recently recorded movements. No spreadsheet row number is used as an identifier.
+
+## Balance reconciliation
+
+Each account now offers **Compare actual balance**. Enter the bank's balance and the date/time it represents, review the calculation, and save an observation. Cash accounts use opening balance + later money in - later money out. Credit-card debt uses opening owed + charges/money out - payments/money in. All amounts use integer cents and account movements include all transaction classifications.
+
+Actual minus calculated is the discrepancy. Zero means the balances match; a nonzero amount explicitly requires review. An unknown opening balance leaves calculated and difference amounts unknown. Saving an observation does not change the opening snapshot, create a balancing transaction, or rewrite any financial record. Corrections use the existing deliberate transaction-edit or opening-snapshot actions and their audit histories.
+
+Observations retain their captured calculation, actual balance, review note and financial input fingerprint. Changes to relevant recorded movements or the opening snapshot flag an old comparison for another review without changing its saved values. Comparison history remains available inside each account. The separate **Update balance** action explicitly resets the opening snapshot, so use comparison when checking a discrepancy.
+
+The only additional table is `Balance_Reconciliations`, with immutable observation rows and an audit record appended in the same request. Existing headers, records and calculations remain compatible; legacy browser storage gains only an empty collection. See [the implementation audit](docs/implementation-audit.md) for the full schema, existing feature inventory, changed files, test results and limitations.
