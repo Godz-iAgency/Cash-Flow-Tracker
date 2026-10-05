@@ -30,13 +30,15 @@ Open http://localhost:3001. No financial credentials are bundled in the frontend
 
 ## Screens and responsive behavior
 
-- **Dashboard:** recorded income, actual expenses, net cash flow, daily activity, planned totals, category spending, and recent entries.
+- **Home:** total cash, recorded monthly income and spending, net cash flow, today's review, a compact budget and the five most recent entries.
 - **Transactions:** daily ledger, search, date and type filters, and edits with preserved previous versions.
 - **Budget:** every supplied expense item, planned versus actual, remaining amount, and monthly plan adjustments that leave other months intact.
 - **Accounts:** all five supplied accounts, dated balance snapshots with later recorded movements, monthly inflows and outflows, and Personal / Business / All filters.
 - **Insights:** daily, weekly, and monthly spending; needs versus wants; average discretionary spending; purchases under a configurable threshold (default $10); repeated merchants and categories; unplanned, miscellaneous, and snack spending.
 
 Phones use bottom navigation and a persistent Add transaction button. Tablets use a compact sidebar, while laptops and desktops use wider card layouts. Forms become bottom sheets on phones. Layouts include safe-area spacing, keyboard focus management, reduced-motion support, and print styles. Money is always displayed to two decimal places.
+
+The five main pages are Home, Transactions, Budget, Accounts and Insights. **More** holds Notes & Reminders, Money Flow, Check-In History, Month-End Review, Settings, Storage & backup, Refresh data and installation/update controls. Payment-account plans and balance calculations expand on request. Charts and spending flags appear in Insights. See [the interface simplification audit](docs/simplification-audit.md).
 
 ## Source data and assumptions
 
@@ -113,13 +115,13 @@ Browser tests use Chromium by default. Install it once with `npx playwright inst
 
 The new features extend the existing app and storage. Transactions, accounts, categories, budgets, and income keep their existing schemas and calculations.
 
-**Notes & Reminders** holds financial observations and next steps: title, note, category, optional related planned/recorded expense and account, Personal/Business scope, priority, status, reminder date, potentially affected amount, cost/savings fields, and timestamps. Due/overdue reminders and high-priority actions appear on the Dashboard. Search and status/priority filters include completed history. Completion does not delete a record, and edits retain prior versions in the audit trail.
+**Notes & Reminders**, inside More, holds financial observations and next steps: title, note, category, optional related planned/recorded expense and account, Personal/Business scope, priority, status, reminder date, potentially affected amount, cost/savings fields, and timestamps. Search and status/priority filters include completed history. Completion does not delete a record, and edits retain prior versions in the audit trail.
 
 Previous and new costs are **comparable monthly amounts**. When both are supplied, monthly savings are calculated as previous cost minus new cost; otherwise a monthly savings figure can be entered directly. Annualized savings are monthly savings multiplied by 12, assuming the change lasts a year. Unknown fields remain unset, a cancelled cost can be zero, and a cost increase remains negative savings. Savings summaries use completed actions only and are labeled reported figures; they are not proof of realized savings and never change income or expenses in the ledger.
 
-**Daily Financial Axiom** rotates through 28 original principles by the browser's local calendar date. Each has one axiom sentence, a two-sentence lesson, and an application question. The content covers ownership, cash flow, allocation, margin, liquidity, compounding, risk, and the other requested topics. It is stored locally in `shared/axioms.ts`; it does not require another Sheets tab, a model call, or transmission of financial history. Educational references are linked for relevant principles.
+The daily financial lesson was removed from the interface to keep everyday tracking focused on the user's money and actions.
 
-**Daily check-in** now reviews every account and classification together. The dashboard uses today even when a different month is selected. It shows income, spending, transfers, net cash flow, transaction count, monthly spending, and remaining budget. Only **Everything Is Recorded** completes the date. **Review Today** opens the dated ledger. Additions and edits invalidate the effective status while prior confirmations remain in history and audit.
+**Today's review** covers every account and classification together. The home card uses today even when a different month is selected and shows spending and transaction count. Only **Confirm entries** completes the date. **Review Today** opens the dated ledger. Additions and edits invalidate the effective status while prior confirmations remain in history and audit.
 
 **Potential financial leaks** are deterministic review signals, not findings of billing errors:
 
@@ -159,7 +161,7 @@ A transaction’s `scope` is its explicit Personal / Business classification. It
 
 **Check-In History** shows a full calendar for any selected month, including missing days and upcoming days. Historical dates can be reviewed and explicitly completed. The history records completion time, transaction count, and the exact transaction IDs/revisions reviewed. Global daily status uses the `All` check-in; legacy per-classification confirmations remain stored. A changed transaction requires another confirmation. Consecutive days can continue through yesterday while today is pending. Completed days include today if confirmed; missed counts exclude today and future days. Calendar dates without confirmations remain visible, including dates before the first recorded entry.
 
-**Tracker settings** sets a local reminder time (default 18:00) and a small-purchase threshold (default $10). An incomplete day shows “Today’s cash flow has not been reviewed.” inside the open app after that time. The state rechecks while the app is open and on focus. It does not send desktop or mobile notifications. Real push delivery would additionally require explicit notification permission, saved push subscriptions, and a server scheduler with a configured timezone to check completion and send Web Push. Installing the app does not add push delivery or background reminder scheduling.
+**Tracker settings**, inside More, sets a local reminder time (default 18:00) and a small-purchase threshold (default $10). An incomplete day's review status changes to **Review due** after that time. The state rechecks while the app is open and on focus. It does not send desktop or mobile notifications. Real push delivery would additionally require explicit notification permission, saved push subscriptions, and a server scheduler with a configured timezone to check completion and send Web Push. Installing the app does not add push delivery or background reminder scheduling.
 
 **Month-End Review** separates Personal / Business income and expenses, net cash flow, Need / Want, planned versus unplanned recorded spending, small purchases, transfers, largest categories, frequent merchants, active leak flags, and reported savings from actions completed in that month. Planned spending matches the budget category and subcategory within the same classification. Savings are a reported monthly change and annualized estimate, not realized cash receipts. Review notes target the following month and appear there; edits preserve an audit trail.
 
@@ -196,6 +198,6 @@ Body text and primary controls use 16px at default settings, supporting details 
 
 ## Scrolling and guided Sheets setup
 
-Pages support native wheel, trackpad and touch scrolling. Dialogs keep the close button visible above a scrollable content region with wheel, touch and keyboard support. The page lock follows the dialog's presence and disappears when it closes. Settings includes **Export full backup** and **Storage & connection**. Review menus and enlarged-text bottom navigation also scroll horizontally. Reload the app after updating to load the current files. In desktop device emulators, use the wheel/trackpad inside the page; mouse dragging depends on the emulator's gesture controls.
+Pages support native wheel, trackpad and touch scrolling. Dialogs keep the close button visible above a scrollable content region with wheel, touch and keyboard support. The page lock follows the dialog's presence and disappears when it closes. **More → Storage & backup** includes **Export full backup**, reporting exports and audit history. Enlarged-text bottom navigation can scroll horizontally. Reload the app after updating to load the current files. In desktop device emulators, use the wheel/trackpad inside the page; mouse dragging depends on the emulator's gesture controls.
 
 See the [guided Google Sheets setup](docs/google-sheets-setup.md) to connect the existing database integration. Export a backup first: on-device entries do not automatically migrate when Sheets is enabled. Keep downloaded service account credentials outside the repository and provide their local path instead of pasting secret contents.

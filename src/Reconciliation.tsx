@@ -16,7 +16,14 @@ function SavedComparison({ state, account, record }: { state: State; account: Ac
 }
 export function ReconciliationPanel({ state, account, onCompare }: { state: State; account: Account; onCompare: () => void }) {
   const records = accountReconciliations(state, account.id);
-  return <section className="reconciliation-panel" aria-label="Balance reconciliation"><h3>Balance reconciliation</h3><BalanceEquation account={account} values={balanceBreakdown(state, account)} />{records.length ? <SavedComparison state={state} account={account} record={records[0]} /> : <p className="panel-note">Actual bank balance has not been compared yet.</p>}<button className="button secondary" onClick={onCompare}>Compare actual balance</button>{records.length > 0 && <details className="comparison-history"><summary>Comparison history ({records.length})</summary>{records.map(record => <details key={record.id}><summary>{atLabel(record.asOf)} · {reconciliationStatus(state, record)}</summary><SavedComparison state={state} account={account} record={record} /><BalanceEquation account={{ ...account, type: record.accountType }} values={{ openingCents: record.openingBalanceCents, openingAsOf: record.openingAsOf, inflows: record.moneyInCents, outflows: record.moneyOutCents, calculatedCents: record.calculatedBalanceCents }} /></details>)}</details>}<p className="panel-note">A comparison preserves your records. Review discrepancies before making any corrections.</p></section>;
+  return <section className="reconciliation-panel" aria-label="Balance reconciliation">
+    {records.length > 0 && <p className={`reconciliation-status ${reconciliationStatus(state, records[0]) === 'Balances match' ? 'matched' : 'review-needed'}`}>{reconciliationStatus(state, records[0])}</p>}
+    <button className="button secondary" onClick={onCompare}>Compare actual balance</button>
+    <details className="comparison-history"><summary>Calculation &amp; history{records.length > 0 ? ` (${records.length})` : ''}</summary>
+      <BalanceEquation account={account} values={balanceBreakdown(state, account)} />
+      {records.map(record => <details key={record.id}><summary>{atLabel(record.asOf)} · {reconciliationStatus(state, record)}</summary><SavedComparison state={state} account={account} record={record} /><BalanceEquation account={{ ...account, type: record.accountType }} values={{ openingCents: record.openingBalanceCents, openingAsOf: record.openingAsOf, inflows: record.moneyInCents, outflows: record.moneyOutCents, calculatedCents: record.calculatedBalanceCents }} /></details>)}
+    </details>
+  </section>;
 }
 export function ReconciliationForm({ state, account, onSave, onClose }: { state: State; account: Account; onSave: (v: unknown) => Promise<void>; onClose: () => void }) {
   const [asOf, setAsOf] = useState(localMinute), [actual, setActual] = useState(''), [note, setNote] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');

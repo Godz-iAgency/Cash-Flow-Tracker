@@ -45,7 +45,7 @@ test('a new version waits while a financial draft is open and updates only on re
   await context.route('**/sw.js', route => route.fulfill({ contentType: 'application/javascript', headers: { 'Cache-Control': 'no-store' }, body: worker + `\n// test version ${version}\n` }));
   await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  await page.locator('.hero-actions').getByRole('button', { name: 'Add transaction', exact: true }).click();
+  await page.getByRole('button', { name: 'Add transaction', exact: true }).click();
   const form = page.getByRole('dialog'); await form.locator('#amount').fill('12.34'); await form.locator('#merchant').fill('Unsaved draft');
   const before = await page.evaluate(() => localStorage.getItem('cash-flow-tracker-v1'));
   version = 2;
@@ -53,7 +53,7 @@ test('a new version waits while a financial draft is open and updates only on re
   await page.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting));
   await expect(form.locator('#merchant')).toHaveValue('Unsaved draft'); expect(await page.evaluate(() => localStorage.getItem('cash-flow-tracker-v1'))).toBe(before);
   await form.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.getByRole('button', { name: 'Update app', exact: true }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click(); await page.getByRole('button', { name: 'Update app', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
   await page.waitForFunction(async () => !(await navigator.serviceWorker.getRegistration())?.waiting);
   expect(await page.evaluate(() => localStorage.getItem('cash-flow-tracker-v1'))).toBe(before);

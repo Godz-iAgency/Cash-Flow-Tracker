@@ -1,3 +1,4 @@
+import { openMore } from './helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { initialState } from '../../shared/seed';
@@ -38,14 +39,14 @@ for (const { width, scale } of [{ width: 320, scale: 1 }, { width: 370, scale: 1
     await page.evaluate(scale => document.documentElement.style.fontSize = `${scale * 100}%`, scale);
     const rows: TextAudit[] = [];
     const inspect = async (name: string) => rows.push(await audit(page, name, scale));
-    const navigate = async (name: string) => { await page.getByRole('button', { name, exact: true }).last().click(); };
+    const navigate = async (name: string) => { if (['Transactions', 'Budget', 'Accounts', 'Insights', 'Dashboard'].includes(name)) await page.getByRole('button', { name, exact: true }).click(); else await openMore(page, name); };
     const close = async () => { await page.keyboard.press('Escape'); await expect(page.getByRole('dialog')).toBeHidden(); };
     await inspect('Dashboard');
     for (const name of ['Transactions', 'Budget', 'Accounts', 'Insights', 'Notes & Reminders', 'View money flow', 'Review check-in history', 'View month-end review']) { await navigate(name); await inspect(name); }
     await navigate('Tracker settings'); await inspect('Settings form'); await close();
     await navigate('Notes & Reminders'); await page.getByRole('button', { name: 'Add financial action', exact: true }).first().click(); await inspect('Financial action form'); await close();
     await navigate('View money flow'); await page.getByRole('button', { name: 'Add income source', exact: true }).click(); await inspect('Income source form'); await close();
-    await navigate('Budget'); await page.locator('.funding-list article').first().getByRole('button', { name: 'Assign funding' }).click(); await inspect('Funding form'); await close();
+    await navigate('Budget'); await page.getByText('Payment accounts & due dates', { exact: true }).click(); await page.locator('.funding-list article').first().getByRole('button', { name: 'Assign funding' }).click(); await inspect('Funding form'); await close();
     await page.getByRole('button', { name: 'Edit Rent budget', exact: true }).click(); await inspect('Budget form'); await close();
     await navigate('Accounts'); await page.locator('.account-card').first().getByRole('button', { name: 'Update balance' }).click(); await inspect('Opening balance form'); await close();
     await page.locator('.account-card').first().getByRole('button', { name: 'Compare actual balance' }).click(); await inspect('Balance comparison form'); await close();
@@ -53,7 +54,7 @@ for (const { width, scale } of [{ width: 320, scale: 1 }, { width: 370, scale: 1
     const form = page.getByRole('dialog');
     for (const type of ['Expense', 'Income', 'Transfer']) { await form.getByRole('button', { name: type, exact: true }).click(); await inspect(type + ' form'); }
     await form.getByRole('button', { name: /Date, time/ }).click(); await inspect('Transaction details'); await close();
-    await page.locator('.connection-button').click(); await inspect('Storage and backup help'); await close();
+    await openMore(page, 'Storage & backup'); await inspect('Storage and backup help'); await close();
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!))).toEqual(state);
     await mkdir('.local/screenshots', { recursive: true });
     await writeFile(`.local/text-audit-${width}-${scale}.json`, JSON.stringify(rows, null, 2));
@@ -61,7 +62,7 @@ for (const { width, scale } of [{ width: 320, scale: 1 }, { width: 370, scale: 1
     if (width === 370 && scale === 1) {
       await navigate('Insights'); await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: '.local/screenshots/readability-insights-370.png' });
       await navigate('Dashboard'); await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: '.local/screenshots/readability-dashboard-370.png' });
-      await page.locator('.hero-actions').getByRole('button', { name: 'Add transaction', exact: true }).click(); await page.screenshot({ path: '.local/screenshots/readability-entry-370.png' });
+      await page.getByRole('button', { name: 'Add transaction', exact: true }).click(); await page.screenshot({ path: '.local/screenshots/readability-entry-370.png' });
     }
   });
 }

@@ -1,23 +1,27 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, ClipboardCheck, Check, Settings } from 'lucide-react';
-import { localDate, money, monthBudgets, summarize, type State } from '../shared/model';
+import { CalendarDays, ClipboardCheck, Check } from 'lucide-react';
+import { localDate, money, type State } from '../shared/model';
 import { transactionFingerprint, type DailyCheckIn } from '../shared/actions';
-import { checkInHistory, checkInStatus, dailyMovement, settingsFor, shiftDate } from '../shared/allocation';
+import { checkInHistory, checkInStatus, dailyMovement, settingsFor } from '../shared/allocation';
 import { dateLabel } from './financialActions';
 import { monthLabel } from './components';
 export type ConfirmDay = (input: Pick<DailyCheckIn, 'date' | 'scope' | 'revision' | 'transactionFingerprint'>) => Promise<void>;
 function Confirmation({ state, date, today, onConfirm, onReview }: { state: State; date: string; today: string; onConfirm: ConfirmDay; onReview: (date: string) => void }) {
   const status = checkInStatus(state, date), [busy, setBusy] = useState(false), [error, setError] = useState('');
   async function confirm() { setBusy(true); setError(''); try { await onConfirm({ date, scope: 'All', revision: status.record?.revision ?? 0, transactionFingerprint: transactionFingerprint(state, date, 'All') }); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
-  return <><div className="check-in-buttons"><button className="button secondary" onClick={() => onReview(date)}>{date === today ? 'Review Today' : 'Review Transactions'}</button><button className="button primary" disabled={busy || status.complete || date > today} onClick={() => void confirm()}><Check size={16} />{busy ? 'Saving…' : status.complete ? 'Complete' : 'Everything Is Recorded'}</button></div>{status.changed && <p className="panel-note">{date === today ? 'Today’s' : 'This day’s'} entries changed after confirmation. Review and confirm this day again.</p>}{error && <p className="form-error" role="alert">{error}</p>}</>;
+  return <><div className="check-in-buttons"><button className="button secondary" onClick={() => onReview(date)}>{date === today ? 'Review Today' : 'Review Transactions'}</button><button className="button primary" disabled={busy || status.complete || date > today} onClick={() => void confirm()}><Check size={16} />{busy ? 'Saving…' : status.complete ? 'Complete' : 'Confirm entries'}</button></div>{status.changed && <p className="panel-note">{date === today ? 'Today’s' : 'This day’s'} entries changed after confirmation. Review and confirm this day again.</p>}{error && <p className="form-error" role="alert">{error}</p>}</>;
 }
-export function DailyCheckIn({ state, today, onConfirm, onReview, onHistory, onSettings }: { state: State; today: string; onConfirm: ConfirmDay; onReview: (date: string) => void; onHistory: () => void; onSettings: () => void }) {
-  const daily = dailyMovement(state, today), status = checkInStatus(state, today), yesterday = shiftDate(today, -1), missed = !checkInStatus(state, yesterday).complete;
+export function DailyCheckIn({ state, today, onConfirm, onReview }: { state: State; today: string; onConfirm: ConfirmDay; onReview: (date: string) => void }) {
+  const daily = dailyMovement(state, today), status = checkInStatus(state, today);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const update = () => setNow(new Date()); const timer = setInterval(update, 30000); window.addEventListener('focus', update); return () => { clearInterval(timer); window.removeEventListener('focus', update); }; }, []);
   const settings = settingsFor(state), time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const monthly = summarize(state.transactions.filter(t => t.date.startsWith(today.slice(0, 7)))), plan = monthBudgets(state, today.slice(0, 7), 'All').reduce((n, b) => n + b.amountCents, 0);
-  return <section className="panel check-in-card"><div className="panel-heading"><div><h2>Daily check-in</h2><p>{dateLabel(today)} · Every account and classification</p></div><ClipboardCheck size={22} /></div><span className={`check-status ${status.complete ? 'complete' : ''}`}>{status.complete ? 'COMPLETE' : 'NOT CHECKED IN'}</span><div className="check-in-values">{[{ label: 'Today’s income', value: money(daily.income) }, { label: 'Today’s spending', value: money(daily.expenses) }, { label: 'Today’s transfers', value: money(daily.transfers) }, { label: 'Transactions', value: String(daily.count) }, { label: 'Net cash flow today', value: money(daily.net) }, { label: 'Current monthly spending', value: money(monthly.expenses) }, { label: 'Remaining monthly budget', value: money(plan - monthly.expenses) }].map(v => <div key={v.label}><span>{v.label}</span><strong>{v.value}</strong></div>)}</div><div className="check-in-question"><h3>Is every dollar that moved today recorded?</h3><Confirmation state={state} date={today} today={today} onConfirm={onConfirm} onReview={onReview} /></div>{!status.complete && time >= settings.reminderTime && <div className="check-reminder" role="status"><CalendarDays size={17} /><span>Today’s cash flow has not been reviewed.</span></div>}{missed && <div className="missed-check-in"><strong>Yesterday’s check-in is incomplete</strong><button className="button secondary" onClick={() => onReview(yesterday)}>Review Yesterday</button></div>}<div className="action-card-footer"><button className="text-button" onClick={onHistory}>Check-In History →</button><button className="text-button" onClick={onSettings}><Settings size={14} />Reminder: {settings.reminderTime}</button></div></section>;
+  const reviewDue = !status.complete && time >= settings.reminderTime;
+  return <section className="panel check-in-card">
+    <div className="panel-heading"><div><h2>Today’s review</h2><p>{dateLabel(today)} · All accounts</p></div><span role={reviewDue ? 'status' : undefined} className={`check-status ${status.complete ? 'complete' : ''}`}>{status.complete ? 'Complete' : reviewDue ? 'Review due' : 'Pending'}</span></div>
+    <p className="check-in-summary">{money(daily.expenses)} spent · {daily.count} {daily.count === 1 ? 'transaction' : 'transactions'}</p>
+    <Confirmation state={state} date={today} today={today} onConfirm={onConfirm} onReview={onReview} />
+  </section>;
 }
 export function CheckInHistory({ state, month, today, onConfirm, onReview }: { state: State; month: string; today: string; onConfirm: ConfirmDay; onReview: (date: string) => void }) {
   const history = checkInHistory(state, month, today), [date, setDate] = useState(month === today.slice(0, 7) ? today : `${month}-01`);

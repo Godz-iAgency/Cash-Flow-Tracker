@@ -32,7 +32,7 @@ An existing initialized cloud tracker, or any partial records without its initia
 
 ## Reporting
 
-After importing, open **Settings → Storage & connection → Export snapshot to Google Sheets**. Each export creates fourteen new `CFT_<UTC timestamp>_<unique suffix>_<table>` tabs. Existing tabs are preserved. Columns keep the existing Sheets schema and use integer cents. Text remains literal, including descriptions beginning with `=`. Audit records are included. The export is an atomic Sheets batch and never changes Firestore records.
+After importing, open **More → Storage & backup → Export to Google Sheets**. Each export creates fourteen new `CFT_<UTC timestamp>_<unique suffix>_<table>` tabs. Existing tabs are preserved. Columns keep the existing Sheets schema and use integer cents. Text remains literal, including descriptions beginning with `=`. Audit records are included. The export is an atomic Sheets batch and never changes Firestore records.
 
 These are manual exports, not scheduled synchronization. Editing the spreadsheet does not update the tracker. Keep JSON backups as well. Dated report tabs consume spreadsheet space and can be removed or archived separately after preserving needed reports.
 

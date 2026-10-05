@@ -20,7 +20,7 @@ Official installation references: [Google Chrome](https://support.google.com/chr
 
 The service worker caches only the public manifest, icons and offline connection page. It bypasses financial API requests, writes, authorization headers and other origins. Financial responses, authentication tokens and application state are never put in its caches. Opening the app without a connection shows a reconnect page; this version does not queue financial writes offline.
 
-A new version waits until **Update app** is selected. Merely discovering an update does not reload an open transaction form. The control is outside financial dialogs, so a draft can be finished or cancelled first. No financial model, amount calculation, Firestore schema, Google Sheets export or existing cloud record was changed for installation.
+A new version waits until **More → Update app** is selected. Merely discovering an update does not reload an open transaction form. A draft can be finished or cancelled before opening More. Installation help appears within More, or on the sign-in page. No financial model, amount calculation, Firestore schema, Google Sheets export or existing cloud record was changed for installation.
 
 `npm run build` generates `dist/sw.js` with a version derived from the current built app and public assets. Vercel serves the worker without a reusable HTTP cache. Development mode does not register a service worker.
 

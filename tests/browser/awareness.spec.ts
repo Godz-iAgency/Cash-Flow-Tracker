@@ -1,9 +1,10 @@
+import { openMore } from './helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { initialState } from '../../shared/seed';
 import { localDate, validateTransaction } from '../../shared/model';
 const today = localDate();
 async function open(page: Page) { await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible(); }
-async function notes(page: Page) { await page.getByRole('button', { name: 'Notes & Reminders', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Notes & Reminders', exact: true })).toBeVisible(); }
+async function notes(page: Page) { await openMore(page, 'Notes & Reminders'); await expect(page.getByRole('heading', { name: 'Notes & Reminders', exact: true })).toBeVisible(); }
 async function addAction(page: Page) {
   await notes(page);
   await page.getByRole('button', { name: 'Add financial action', exact: true }).first().click();
@@ -22,7 +23,7 @@ async function addAction(page: Page) {
 for (const width of [320, 390, 768, 1024, 1440, 1920]) {
   test(`notes, reminders, and awareness cards fit at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 }); await open(page);
-    await expect(page.getByRole('heading', { name: 'Daily Financial Axiom' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Daily Financial Axiom' })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await notes(page);
     await page.getByRole('button', { name: 'Add financial action', exact: true }).first().click();
@@ -56,15 +57,15 @@ test('financial action saves, completes, stays in history, and leaves cash flow 
 });
 test('check-in persists, becomes unconfirmed after a new entry, and opens today’s ledger', async ({ page }) => {
   await open(page);
-  const checkIn = page.locator('.check-in-card'); await checkIn.getByRole('button', { name: 'Everything Is Recorded', exact: true }).click();
+  const checkIn = page.locator('.check-in-card'); await checkIn.getByRole('button', { name: 'Confirm entries', exact: true }).click();
   await expect(checkIn.getByRole('button', { name: 'Complete', exact: true })).toBeDisabled();
   await page.reload(); await expect(checkIn.getByRole('button', { name: 'Complete', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click();
   const form = page.getByRole('dialog'); await form.getByRole('textbox', { name: 'Amount', exact: true }).fill('0.10'); await form.locator('#merchant').fill('New recorded purchase'); await form.locator('#account').selectOption('capital-one-checking');
   await form.getByRole('button', { name: 'Save transaction' }).click(); await expect(form).toBeHidden();
-  await expect(checkIn.getByRole('button', { name: 'Everything Is Recorded', exact: true })).toBeEnabled();
+  await expect(checkIn.getByRole('button', { name: 'Confirm entries', exact: true })).toBeEnabled();
   await expect(checkIn).toContainText('Today’s entries changed');
-  await expect(checkIn.locator('.check-in-values')).toContainText('$0.10');
+  await expect(checkIn.locator('.check-in-summary')).toContainText('$0.10');
   await checkIn.getByRole('button', { name: 'Review Today', exact: true }).click();
   await expect(page.getByLabel('Filter ledger date')).toHaveValue(today);
   await expect(page.getByText('New recorded purchase', { exact: true })).toBeVisible();
@@ -77,7 +78,7 @@ test('legacy data survives migration, and a bill flag creates an editable remind
   });
   const { notesReminders, dailyCheckIns, leakReviews, ...legacy } = seed;
   await page.addInitScript(data => { if (!localStorage.getItem('cash-flow-tracker-v1')) localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(data)); }, legacy);
-  await open(page);
+  await open(page); await page.getByRole('button', { name: 'Insights', exact: true }).click();
   const flag = page.locator('.leak-item').filter({ has: page.getByRole('heading', { name: 'Recurring cost increased', exact: true }) });
   await expect(flag).toContainText('$70.00'); await expect(flag).toContainText('$92.00');
   await flag.getByRole('button', { name: 'Review Bill' }).click();
@@ -87,7 +88,7 @@ test('legacy data survives migration, and a bill flag creates an editable remind
   await expect(form.getByLabel('Amount potentially affected ($, optional)', { exact: true })).toHaveValue('22.00');
   await form.getByRole('button', { name: 'Save action' }).click(); await expect(form).toBeHidden();
   await flag.getByRole('button', { name: 'Dismiss', exact: true }).click(); await expect(flag).toBeHidden();
-  await page.reload(); await expect(flag).toBeHidden();
+  await page.reload(); await page.getByRole('button', { name: 'Insights', exact: true }).click(); await expect(flag).toBeHidden();
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!));
   expect(stored.transactions).toHaveLength(4); expect(stored.notesReminders).toHaveLength(1); expect(stored.leakReviews).toHaveLength(1);
   expect(stored.accounts).toEqual(legacy.accounts); expect(stored.budgets).toEqual(legacy.budgets);

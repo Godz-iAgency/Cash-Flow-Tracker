@@ -425,3 +425,57 @@ html:has(.modal-backdrop), body:has(.modal-backdrop) { overflow-y: hidden !impor
 @media(max-width: 540px) { .cloud-choices { flex-direction: column; } .cloud-choices > .button { width: 100%; } }
 .cloud-confirm { display: flex; align-items: flex-start; gap: 12px; font-size: 1rem; line-height: 1.5; }
 .cloud-confirm input { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 2px; }
+
+/* A quiet home screen and one place for occasional tools. */
+.topbar { display: none; }
+.sidebar .brand { margin-bottom: 32px; }
+.sidebar-bottom { display: block; margin-top: auto; padding-top: 24px; }
+.sidebar-bottom .nav-link { width: 100%; }
+.balance-hero { padding: 24px; background: linear-gradient(120deg, #182413, #11190e); border-color: #35442b; }
+.hero-total { margin: 0; }
+.hero-total > strong { font-size: clamp(2.25rem, 4vw, 3.25rem); margin: 8px 0; }
+.hero-total > p { margin: 0; color: var(--muted); }
+.balance-missing { display: block; color: var(--muted); font-size: var(--type-detail); margin-top: 8px; }
+.hero-total > .text-button { margin: 6px auto -6px; }
+.dashboard-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+.dashboard-grid .plan-panel { display: block; grid-column: auto; }
+.dashboard-grid .recent-panel { grid-column: auto; }
+.dashboard-grid .plan-panel .budget-total { margin-top: 12px; }
+.money-card h2 { margin-bottom: 0; }
+.check-in-card .panel-heading { margin-bottom: 8px; }
+.check-in-card .check-status { margin: 0; letter-spacing: 0; font-weight: 500; }
+.check-in-summary { color: var(--muted); margin: 8px 0 18px; }
+.check-in-card .check-in-buttons .button { flex: 0 1 auto; }
+.check-in-card .check-reminder { margin-top: 12px; }
+.more-links { display: grid; }
+.more-links + .more-links { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
+.more-links button { display: flex; align-items: center; gap: 14px; text-align: left; min-height: 56px; padding: 12px 8px; border-radius: 10px; font-size: var(--type-body); }
+.more-links button:hover { background: var(--raised); }
+.more-links button > svg { flex-shrink: 0; color: var(--muted); }
+.more-links button > span { flex: 1; min-width: 0; }
+.more-install { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 16px; }
+.more-install > small { display: block; color: var(--muted); margin-top: 12px; }
+.more-install .install-instructions { margin-top: 18px; }
+.balance-help { margin-bottom: 20px; color: var(--muted); font-size: var(--type-detail); }
+.balance-help summary, .disclosure-panel > summary { cursor: pointer; min-height: 44px; padding: 10px 0; }
+.balance-help p { max-width: 640px; margin: 8px 0; }
+.disclosure-panel { margin-top: 20px; }
+.disclosure-panel > summary { font-size: var(--type-body); font-weight: 600; }
+.disclosure-panel .expense-funding { border: 0; padding: 16px 0 0; margin: 0; box-shadow: none; }
+.reconciliation-panel { margin-top: 20px; padding-top: 16px; }
+.reconciliation-panel > .button { width: 100%; }
+.reconciliation-panel > .comparison-history { margin-top: 8px; }
+.account-card > .button { width: 100%; margin-top: 12px; }
+.account-upcoming { margin-top: 16px; }
+.cash-flow-panel { margin-bottom: 20px; }
+.login-card > .button { margin-top: 24px; }
+@media (max-width: 1000px) { .dashboard-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .topbar { display: flex; padding-top: env(safe-area-inset-top, 0px); height: calc(60px + env(safe-area-inset-top, 0px)); }
+  .mobile-brand { display: flex; align-items: center; gap: 9px; font-weight: 600; min-width: 0; }
+  .mobile-brand .brand-mark { width: 30px; height: 30px; border-radius: 9px; }
+  .balance-hero { padding: 20px 16px; border-radius: 20px; }
+  .hero-total > strong { font-size: 2.25rem; }
+  .check-in-card .check-in-buttons .button { flex: 1 1 130px; }
+}
+@media print { .sidebar-bottom, .balance-help, .disclosure-panel > summary { display: none; } }

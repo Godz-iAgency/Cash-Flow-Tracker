@@ -1,3 +1,4 @@
+import { openMore } from './helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { initialState } from '../../shared/seed';
@@ -26,7 +27,7 @@ test('discrepancies and matching comparisons persist without altering financial 
   await card(page).locator('.comparison-history > summary').click(); await expect(card(page).locator('.comparison-history > details')).toHaveCount(2);
   await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click(); const form = page.getByRole('dialog'); await form.getByRole('button', { name: 'Income', exact: true }).click(); await form.locator('#amount').fill('50.00'); await form.locator('#merchant').fill('Additional income'); await form.locator('#account').selectOption('capital-one-checking'); await form.getByRole('button', { name: /Date, time/ }).click(); await form.locator('#date').fill(today); await form.locator('#time').fill('00:02'); await form.getByRole('button', { name: 'Save transaction' }).click(); await expect(form).toBeHidden();
   await expect(card(page).locator('.saved-comparison').first()).toContainText('Ledger changed; compare again'); await expect(card(page).locator('.account-balance strong')).toHaveText('$1,025.00'); expect((await stored(page)).balanceReconciliations).toEqual(capturedComparisons);
-  await page.getByRole('button', { name: 'On this device', exact: true }).click(); await page.getByRole('button', { name: 'Audit history' }).click(); await expect(page.getByRole('dialog')).toContainText('Balance comparison saved');
+  await openMore(page, 'Storage & backup'); await page.getByRole('button', { name: 'Audit history' }).click(); await expect(page.getByRole('dialog')).toContainText('Balance comparison saved');
 });
 
 test('unknown opening balance is flagged and saving actual balance does not fabricate a baseline', async ({ page }) => {

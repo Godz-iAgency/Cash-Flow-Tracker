@@ -56,7 +56,7 @@ export function PwaProvider({ children }: { children: ReactNode }) {
   return <PwaContext.Provider value={{ installed, prompt, waiting, online, clearPrompt: () => setPrompt(undefined), update }}>{children}</PwaContext.Provider>;
 }
 
-export function InstallControls() {
+export function InstallControls({ inlineHelp = false }: { inlineHelp?: boolean } = {}) {
   const pwa = useContext(PwaContext);
   const [instructions, setInstructions] = useState(false), [error, setError] = useState('');
   if (!pwa) return null;
@@ -68,12 +68,7 @@ export function InstallControls() {
     catch { setError('Use your browser menu to install the app.'); setInstructions(true); }
     finally { pwa.clearPrompt(); }
   }
-  return <><span className="pwa-controls">
-    {!pwa.installed && <button type="button" className="text-button" onClick={() => void install()}><Download size={16} />Install app</button>}
-    {pwa.waiting && <button type="button" className="text-button" disabled={!pwa.online} onClick={pwa.update}><RefreshCw size={16} />Update app</button>}
-  </span>{instructions && createPortal(
-    <Modal title="Install Cash Flow" onClose={() => setInstructions(false)}>
-      <div className="install-instructions">
+  const help = <div className="install-instructions">
         <BrandMark />{error && <p role="alert">{error}</p>}
         {ios ? <>
           <p>Open this website in Safari.</p>
@@ -92,7 +87,9 @@ export function InstallControls() {
           </ol>
         </> : <p>Use the install icon in Chrome or Edge’s address bar, or open this website on your phone to add it to the home screen.</p>}
         <p>Sign in with the same Google account on each device. An internet connection is needed for Firestore.</p>
-      </div>
-    </Modal>, document.body
-  )}</>;
+      </div>;
+  return <><span className="pwa-controls">
+    {!pwa.installed && <button type="button" className="text-button" onClick={() => void install()}><Download size={16} />Install app</button>}
+    {pwa.waiting && <button type="button" className="text-button" disabled={!pwa.online} onClick={pwa.update}><RefreshCw size={16} />Update app</button>}
+  </span>{instructions && (inlineHelp ? help : createPortal(<Modal title="Install Cash Flow" onClose={() => setInstructions(false)}>{help}</Modal>, document.body))}</>;
 }
