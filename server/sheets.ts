@@ -1,8 +1,8 @@
 import { JWT } from 'google-auth-library';
-import { readFirebaseServiceAccount, serviceAccountConfigured } from './credentials';
+import { readFirebaseServiceAccount, serviceAccountConfigured } from './credentials.js';
 import { randomBytes, randomInt } from 'node:crypto';
-import { initialState } from '../shared/seed';
-import type { State } from '../shared/model';
+import { initialState } from '../shared/seed.js';
+import type { State } from '../shared/model.js';
 
 type Table = keyof State;
 const headers: Record<Table, string[]> = {

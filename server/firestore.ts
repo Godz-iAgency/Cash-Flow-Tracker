@@ -1,8 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import type { Firestore, Transaction as FirestoreTransaction } from 'firebase-admin/firestore';
-import type { State } from '../shared/model';
-import { stateTables, validateBackup } from '../shared/backup';
+import type { State } from '../shared/model.js';
+import { stateTables, validateBackup } from '../shared/backup.js';
 
 export type RecordWrite = { table: keyof State; records: unknown[] };
 export function documentId(table: keyof State, record: { id: string; month?: string }) {

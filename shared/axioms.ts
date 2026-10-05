@@ -1,4 +1,4 @@
-import { localDate } from './model';
+import { localDate } from './model.js';
 export interface FinancialAxiom { topic: string; axiom: string; lesson: string; question: string; source?: string; }
 // Original educational principles, fixed locally so no financial history is sent to a model.
 const principles: [string, string, string, string, string?][] = [

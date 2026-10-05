@@ -1,5 +1,5 @@
-import { accountFlows, localDate, monthBudgets, scopedTransactions, summarize, type Account, type Scope, type State, type Transaction } from './model';
-import { transactionFingerprint, validDate } from './actions';
+import { accountFlows, localDate, monthBudgets, scopedTransactions, summarize, type Account, type Scope, type State, type Transaction } from './model.js';
+import { transactionFingerprint, validDate } from './actions.js';
 export interface ExpenseFunding { id: string; budgetId: string; month: string; paymentAccountId: string; amountCents: number; dueDay: number | null; autopay: boolean; revision: number; updatedAt: string; }
 export interface TrackerSettings { id: 'app'; reminderTime: string; smallPurchaseThresholdCents: number; revision: number; updatedAt: string; }
 export interface IncomeSource { id: string; name: string; scope: Scope; category: string; defaultAccountId: string; revision: number; updatedAt: string; }

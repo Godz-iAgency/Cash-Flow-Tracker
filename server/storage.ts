@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import * as sheets from './sheets';
-import { firestoreEnabled, firebaseDatabase } from './firebase';
-import { FirestoreStore, type RecordWrite } from './firestore';
+import * as sheets from './sheets.js';
+import { firestoreEnabled, firebaseDatabase } from './firebase.js';
+import { FirestoreStore, type RecordWrite } from './firestore.js';
 
 const context = new AsyncLocalStorage<FirestoreStore>();
 export const backend = () => firestoreEnabled() ? 'firestore' : sheets.configured() ? 'sheets' : 'local';

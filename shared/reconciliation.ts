@@ -1,5 +1,5 @@
-import type { Account, State } from './model';
-import { balanceBreakdown, localMinute, validSnapshot } from './allocation';
+import type { Account, State } from './model.js';
+import { balanceBreakdown, localMinute, validSnapshot } from './allocation.js';
 
 export interface BalanceReconciliation {
   id: string; accountId: string; accountType: Account['type']; asOf: string; actualBalanceCents: number;

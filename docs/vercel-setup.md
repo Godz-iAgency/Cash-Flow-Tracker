@@ -56,6 +56,8 @@ The private local cloud profile remains at localhost:3002. Its ignored .local/cl
 
 ## Validation and limits
 
+The server/shared modules use explicit .js import paths so compiled TypeScript can start in Node ESM on Vercel. A regression check compiles the full API module graph and serves it in plain Node without tsx, preventing development-only module resolution from concealing startup failures. The final build and all 48 unit/security tests passed.
+
 No live import or export was performed as part of hosting preparation. Server checks cover missing hosted configuration, JSON and local-file credentials, wrong-project and malformed credentials, public-status secret exclusion, owner-auth requirements, and HTTPS-origin validation through a proxy. Final production login and database/report writes depend on the environment variables, authorized domain and sharing being configured in their consoles.
 
 Official references: [Vercel Node functions](https://vercel.com/docs/functions/runtimes/node-js), [Vercel configuration](https://vercel.com/docs/project-configuration/vercel-json), [Vercel environment variables](https://vercel.com/docs/environment-variables), [Firebase Google sign-in](https://firebase.google.com/docs/auth/web/google-signin).

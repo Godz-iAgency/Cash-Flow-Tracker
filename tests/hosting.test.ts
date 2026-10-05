@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, mkdir, readFile, readdir } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { pathToFileURL } from 'node:url';
+import ts from 'typescript';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
@@ -106,3 +110,26 @@ test('local credential files remain supported and explicit invalid JSON never fa
     await rm(directory, { recursive: true, force: true });
   }
 }));
+
+test('compiled hosted API starts in plain Node ESM without the development loader', async () => {
+  const parent = path.resolve('.local'); await mkdir(parent, { recursive: true });
+  const directory = await mkdtemp(path.join(parent, 'compiled-hosting-'));
+  try {
+    for (const folder of ['api', 'server', 'shared']) {
+      await mkdir(path.join(directory, folder), { recursive: true });
+      for (const filename of await readdir(folder)) {
+        if (!filename.endsWith('.ts')) continue;
+        const source = await readFile(path.join(folder, filename), 'utf8');
+        const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } });
+        await writeFile(path.join(directory, folder, filename.replace(/\.ts$/, '.js')), compiled.outputText);
+      }
+    }
+    const entry = pathToFileURL(path.join(directory, 'api/index.js')).href;
+    const script = `import { createServer } from 'node:http'; const { default: app } = await import(${JSON.stringify(entry)}); const server = createServer(app); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const response = await fetch('http://127.0.0.1:' + server.address().port + '/api/status'); console.log(JSON.stringify({ status: response.status, error: (await response.json()).error })); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));`;
+    const { stdout } = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', script], { timeout: 45000, env: { ...process.env, STORAGE_BACKEND: '', APP_ORIGIN: '' } });
+    const result = JSON.parse(stdout.trim()); assert.equal(result.status, 503); assert.match(result.error, /Vercel environment variables/);
+  } finally {
+    assert.equal(path.dirname(path.resolve(directory)), parent); assert.ok(path.basename(directory).startsWith('compiled-hosting-'));
+    await rm(directory, { recursive: true, force: true });
+  }
+});

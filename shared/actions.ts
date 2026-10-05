@@ -1,4 +1,4 @@
-import { localDate, monthBudgets, scopedTransactions, type Scope, type State } from './model';
+import { localDate, monthBudgets, scopedTransactions, type Scope, type State } from './model.js';
 export const actionCategories = ['Bill Review', 'Cost Reduction', 'Negotiation', 'Subscription', 'Insurance', 'Banking', 'Business', 'Income Opportunity', 'Financial Leak', 'Research', 'Other'] as const;
 export type ActionCategory = typeof actionCategories[number];
 export type Priority = 'Low' | 'Medium' | 'High';

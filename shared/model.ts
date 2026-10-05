@@ -1,6 +1,6 @@
-import type { BalanceReconciliation } from './reconciliation';
-import type { ExpenseFunding, IncomeSource, MonthReview, TrackerSettings } from './allocation';
-import type { DailyCheckIn, FinancialAction, LeakReview } from './actions';
+import type { BalanceReconciliation } from './reconciliation.js';
+import type { ExpenseFunding, IncomeSource, MonthReview, TrackerSettings } from './allocation.js';
+import type { DailyCheckIn, FinancialAction, LeakReview } from './actions.js';
 export type Scope = 'Personal' | 'Business';
 export type TransactionType = 'Expense' | 'Income' | 'Transfer';
 export type Classification = 'Need' | 'Want' | '';

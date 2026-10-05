@@ -1,5 +1,5 @@
-import { money, monthBudgets, type Scope, type State, type Transaction } from './model';
-import { settingsFor } from './allocation';
+import { money, monthBudgets, type Scope, type State, type Transaction } from './model.js';
+import { settingsFor } from './allocation.js';
 export interface FinancialLeak {
   id: string; month: string; scope: Scope; title: string; message: string;
   category: 'Bill Review' | 'Subscription' | 'Financial Leak';

@@ -1,5 +1,5 @@
-import { extendState } from './actions';
-import { validateTransaction, type State } from './model';
+import { extendState } from './actions.js';
+import { validateTransaction, type State } from './model.js';
 
 export const stateTables: (keyof State)[] = ['accounts', 'categories', 'budgets', 'income', 'transactions', 'audit', 'notesReminders', 'dailyCheckIns', 'leakReviews', 'expenseFunding', 'incomeSources', 'settings', 'monthReviews', 'balanceReconciliations'];
 

@@ -3,14 +3,14 @@ import express from 'express';
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { backend, configured, mutate, readState, writeRecords, withCloudUser, cloudStore } from './storage';
-import { authenticateFirebase, firebaseWebConfig, firestoreEnabled, validateFirebaseConfiguration } from './firebase';
-import { reportsConfigured, exportSnapshot } from './sheets';
-import { validateTransaction } from '../shared/model';
-import { validateAction, validateCheckIn } from '../shared/actions';
-import { balanceSnapshotIds, validSnapshot, validateFunding, validateIncomeSource, validateMonthReview, validateSettings } from '../shared/allocation';
-import { validateReconciliation } from '../shared/reconciliation';
-import { detectLeaks } from '../shared/leaks';
+import { backend, configured, mutate, readState, writeRecords, withCloudUser, cloudStore } from './storage.js';
+import { authenticateFirebase, firebaseWebConfig, firestoreEnabled, validateFirebaseConfiguration } from './firebase.js';
+import { reportsConfigured, exportSnapshot } from './sheets.js';
+import { validateTransaction } from '../shared/model.js';
+import { validateAction, validateCheckIn } from '../shared/actions.js';
+import { balanceSnapshotIds, validSnapshot, validateFunding, validateIncomeSource, validateMonthReview, validateSettings } from '../shared/allocation.js';
+import { validateReconciliation } from '../shared/reconciliation.js';
+import { detectLeaks } from '../shared/leaks.js';
 
 export function createApp({ hosted = process.env.VERCEL === '1' } = {}) {
   const app = express();

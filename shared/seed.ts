@@ -1,4 +1,4 @@
-import type { State } from './model';
+import type { State } from './model.js';
 
 // Exact amounts and labels from the supplied written specification.
 // No source spreadsheet or opening balances were supplied.
