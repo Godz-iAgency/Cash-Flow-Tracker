@@ -1,6 +1,6 @@
 # Water appearance preview
 
-This branch implements the latest water-theme request against the existing app. It preserves layout dimensions, spacing, responsive rules, navigation positions, financial classifications, cent calculations and the existing workflows. The broader entry, budget and bank-check redesign in the attached brief is outside this visual pass.
+This update implements the latest water-theme request against the existing app. It preserves layout dimensions, spacing, responsive rules, navigation positions, financial classifications, cent calculations and the existing workflows. The broader entry, budget and bank-check redesign in the attached brief is outside this visual pass.
 
 ## Palette and appearance
 
@@ -22,7 +22,7 @@ Undo is the one requested behavior addition. A new save is cancelled through a r
 
 Append `?preview=water` to the branch deployment URL to use synthetic records. This mode makes no cloud API requests and uses a separate on-device storage key. It cannot import, alter or export real cloud financial records. Sample entries can be added and undone to review the interaction. The preview banner identifies sample data.
 
-Main is not merged. The attached brief explicitly requested a review branch and approval before merging or changing real data. No live financial data was written during this work.
+The update was developed and tested on a review branch, then merged into main after the user explicitly approved publishing it. No live financial data was written during development, validation or deployment.
 
 ## Validation
 
