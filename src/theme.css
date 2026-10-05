@@ -366,6 +366,9 @@ p, .field-hint, .panel-note, small, .tag { line-height: 1.5; }
 }
 .login-card h1, .login-card p, .login-card small { overflow-wrap: anywhere; }
 body { overflow-wrap: anywhere; }
+/* Keep scope labels intact; reflow the controls instead of breaking words. */
+.scope-picker { flex: 0 1 auto; flex-wrap: wrap; max-width: 100%; }
+.scope-picker button { flex: 1 0 auto; min-width: max-content; white-space: nowrap; }
 @media (max-width: 760px) {
   .ledger-summary, .check-in-values, .account-totals, .review-values,
   .insights-stats, .need-want-values, .budget-item-stats, .account-flows {
