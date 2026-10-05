@@ -2,7 +2,9 @@
 
 Production website: https://cash-flow-tracker-godz-i.vercel.app/
 
-The repository builds the Vite frontend into dist and sends /api requests to api/index.ts, which uses the existing Express routes, owner verification and Firestore transactions. Local startup remains server/index.ts. Git pushes to the connected production branch trigger deployment; verify that Vercel's production branch is main.
+The repository builds the Vite frontend into dist and sends /api requests to api/index.js, which uses the existing Express routes, owner verification and Firestore transactions. Local startup remains server/index.ts. Git pushes to the connected production branch trigger deployment; verify that Vercel's production branch is main.
+
+The hosted handler is generated from server/handler.ts by scripts/build-server.mjs. It bundles the internal server/shared module graph into ready-to-run Node 24 JavaScript while keeping installed packages external. The generated API file is checked in and rebuilt by npm run build and before npm test, so Vercel does not need to resolve internal TypeScript imports at runtime. No environment values are embedded during the build.
 
 ## 1. Project settings
 
@@ -56,7 +58,7 @@ The private local cloud profile remains at localhost:3002. Its ignored .local/cl
 
 ## Validation and limits
 
-The server/shared modules use explicit .js import paths so compiled TypeScript can start in Node ESM on Vercel. A regression check compiles the full API module graph and serves it in plain Node without tsx, preventing development-only module resolution from concealing startup failures. The final build and all 48 unit/security tests passed.
+The server/shared modules use explicit .js import paths so compiled TypeScript can start in Node ESM. Regression checks compile the full API module graph and separately serve the actual packaged JavaScript API in plain Node without tsx, preventing development-only module resolution from concealing startup failures. The final build and all 49 unit/security tests passed.
 
 No live import or export was performed as part of hosting preparation. Server checks cover missing hosted configuration, JSON and local-file credentials, wrong-project and malformed credentials, public-status secret exclusion, owner-auth requirements, and HTTPS-origin validation through a proxy. Final production login and database/report writes depend on the environment variables, authorized domain and sharing being configured in their consoles.
 

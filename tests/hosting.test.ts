@@ -33,7 +33,7 @@ async function serve(app: ReturnType<typeof createApp>, operation: (root: string
 }
 
 test('hosted mode refuses incomplete storage setup rather than switching to device mode', async () => environment(async () => {
-  const { default: handler } = await import('../api/index');
+  const { default: handler } = await import(pathToFileURL(path.resolve('api/index.js')).href);
   await serve(handler, async root => {
     for (const endpoint of ['/api/status', '/api/state', '/api/cloud/info']) {
       const response = await fetch(root + endpoint); assert.equal(response.status, 503);
@@ -124,7 +124,7 @@ test('compiled hosted API starts in plain Node ESM without the development loade
         await writeFile(path.join(directory, folder, filename.replace(/\.ts$/, '.js')), compiled.outputText);
       }
     }
-    const entry = pathToFileURL(path.join(directory, 'api/index.js')).href;
+    const entry = pathToFileURL(path.join(directory, 'server/handler.js')).href;
     const script = `import { createServer } from 'node:http'; const { default: app } = await import(${JSON.stringify(entry)}); const server = createServer(app); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const response = await fetch('http://127.0.0.1:' + server.address().port + '/api/status'); console.log(JSON.stringify({ status: response.status, error: (await response.json()).error })); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));`;
     const { stdout } = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', script], { timeout: 45000, env: { ...process.env, STORAGE_BACKEND: '', APP_ORIGIN: '' } });
     const result = JSON.parse(stdout.trim()); assert.equal(result.status, 503); assert.match(result.error, /Vercel environment variables/);
@@ -133,3 +133,11 @@ test('compiled hosted API starts in plain Node ESM without the development loade
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('packaged Vercel JavaScript serves configured cloud status and rejects anonymous reads in plain Node', async () => environment(async () => {
+  configure();
+  const entry = pathToFileURL(path.resolve('api/index.js')).href;
+  const script = `import { createServer } from 'node:http'; const { default: app } = await import(${JSON.stringify(entry)}); const server = createServer(app); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const root = 'http://127.0.0.1:' + server.address().port; const response = await fetch(root + '/api/status'); const status = await response.json(); const data = await fetch(root + '/api/state'); console.log(JSON.stringify({ response: response.status, backend: status.backend, configured: status.configured, authenticated: status.authenticated, state: data.status, secretExposed: JSON.stringify(status).includes('private_key') })); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));`;
+  const { stdout } = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', script], { timeout: 45000, env: { ...process.env } });
+  assert.deepEqual(JSON.parse(stdout.trim()), { response: 200, backend: 'firestore', configured: true, authenticated: false, state: 401, secretExposed: false });
+}));

@@ -6,7 +6,7 @@ For the hosted app at https://cash-flow-tracker-godz-i.vercel.app, follow the [V
 
 ## Start locally
 
-Requires Node.js 22.12+ (Node.js 24 recommended).
+Requires Node.js 24.x, matching the hosted runtime.
 
 ```sh
 npm install
