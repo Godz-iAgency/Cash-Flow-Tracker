@@ -6,6 +6,7 @@ import { requireOwner } from '../server/firebase';
 import { initialState } from '../shared/seed';
 import { stateTables, validateBackup } from '../shared/backup';
 import { validateTransaction } from '../shared/model';
+import { undoEntry } from '../shared/undo';
 
 // A transactional driver: staged writes commit together, thrown operations roll
 // back, and independent store instances see the preceding committed revision.
@@ -36,6 +37,23 @@ class TransactionalDatabase {
     return result;
   }
 }
+
+test('Firestore Undo retains the stored entry and immutable audit, excludes it from active money and cannot run twice', async () => {
+  const driver = new TransactionalDatabase(), store = new FirestoreStore(driver as unknown as Firestore, 'owner');
+  const source = initialState();
+  const entry = validateTransaction({ id: 'undo-sample', type: 'Expense', date: '2026-10-01', time: '12:00', amountCents: 5, category: 'Food', subcategory: 'Grocery', merchant: 'Sample', description: '', accountId: source.accounts[0].id, toAccountId: '', scope: 'Personal', classification: 'Need', notes: '' }, source);
+  source.transactions = [entry]; source.audit = [{ id: 'saved', entity: 'transaction', entityId: entry.id, at: entry.updatedAt, before: null, after: entry }];
+  await store.initialize(source);
+  const cancel = () => store.mutate(async () => {
+    const result = undoEntry(await store.readState(), entry.id, entry.revision);
+    await store.writeRecords([{ table: 'transactions', records: [result.stored] }, { table: 'audit', records: [{ id: 'cancelled', entity: 'transaction undo', entityId: entry.id, at: result.stored.updatedAt, before: result.current, after: result.restored }] }]);
+  });
+  await cancel();
+  assert.deepEqual((await store.readState()).transactions, []);
+  const preserved = await store.readState(true); assert.equal(preserved.transactions[0].amountCents, 5); assert.equal(preserved.transactions[0].voided, true);
+  assert.deepEqual(preserved.audit[0], source.audit[0]); assert.deepEqual(preserved.audit[1].before, entry); assert.equal(preserved.audit[1].after, null);
+  await assert.rejects(cancel(), /changed/); assert.equal((await store.readState()).audit.length, 2);
+});
 
 test('Firestore import preserves exact records and refuses duplicate imports or partial data', async () => {
   const driver = new TransactionalDatabase(), store = new FirestoreStore(driver as unknown as Firestore, 'owner');

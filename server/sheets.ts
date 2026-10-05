@@ -10,7 +10,7 @@ const headers: Record<Table, string[]> = {
   categories: ['id', 'name'],
   budgets: ['id', 'label', 'category', 'amountCents', 'scope', 'month'],
   income: ['id', 'label', 'amountCents', 'scope', 'month'],
-  transactions: ['id', 'date', 'time', 'type', 'amountCents', 'category', 'subcategory', 'merchant', 'description', 'accountId', 'toAccountId', 'scope', 'classification', 'notes', 'createdAt', 'updatedAt', 'revision'],
+  transactions: ['id', 'date', 'time', 'type', 'amountCents', 'category', 'subcategory', 'merchant', 'description', 'accountId', 'toAccountId', 'scope', 'classification', 'notes', 'createdAt', 'updatedAt', 'revision', 'voided'],
   audit: ['id', 'entity', 'entityId', 'at', 'before', 'after'],
   notesReminders: ['id', 'title', 'note', 'category', 'relatedExpenseId', 'relatedAccountId', 'scope', 'priority', 'status', 'reminderDate', 'amountAffectedCents', 'previousCostCents', 'newCostCents', 'monthlySavingsCents', 'annualizedSavingsCents', 'createdAt', 'completedAt', 'updatedAt', 'revision'],
   dailyCheckIns: ['id', 'date', 'scope', 'confirmedAt', 'transactionFingerprint', 'revision', 'completed', 'completedAt', 'transactionsReviewed'],
@@ -74,7 +74,7 @@ async function initialize() {
   const writes: unknown[] = [];
   names.forEach((table, i) => {
     const row = existing.valueRanges[i]?.values?.[0] ?? [];
-    const legacyLength = table === 'dailyCheckIns' ? 6 : table === 'accounts' ? 7 : 0;
+    const legacyLength = table === 'dailyCheckIns' ? 6 : table === 'accounts' ? 7 : table === 'transactions' ? 17 : 0;
     if (legacyLength && row.length === legacyLength && row.join('|') === sheetHeaders(table).slice(0, legacyLength).join('|')) {
       writes.push({ updateCells: { start: { sheetId: ids[table], rowIndex: 0, columnIndex: legacyLength }, fields: 'userEnteredValue', rows: [cells(sheetHeaders(table).slice(legacyLength))] } });
     } else if (row.length && row.join('|') !== sheetHeaders(table).join('|')) throw new Error(`The ${sheetName(table)} sheet has an incompatible header. Existing data has not been overwritten; review the header before retrying.`);
@@ -105,9 +105,11 @@ export async function readState(): Promise<State> {
       if (key === 'dueDay') value = value === '' ? null : Number(value);
       if (key === 'transactionsReviewed') value = value === '' ? undefined : Number(value);
       if (key === 'autopay' || key === 'completed') value = value === '' && key === 'completed' ? undefined : value === true || value === 'true';
+      if (key === 'voided') value = value === true || value === 'true' ? true : undefined;
       if (key === 'before' || key === 'after') value = value ? JSON.parse(String(value)) : null;
       return [key, value];
     })));
+    if (table === 'transactions') for (const record of records) if (record.voided === undefined) delete record.voided;
     // Transactions, account changes, and monthly plans are append-only versions.
     // Resolve the latest record by stable ID, never by a client-supplied row number.
     if (table === 'dailyCheckIns') for (const record of records) { record.completed ??= true; record.completedAt ||= record.confirmedAt; record.transactionsReviewed ??= JSON.parse(String(record.transactionFingerprint)).length; }

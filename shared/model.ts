@@ -21,6 +21,7 @@ export interface Transaction {
   category: string; subcategory: string; merchant: string; description: string;
   accountId: string; toAccountId: string; scope: Scope; classification: Classification;
   notes: string; createdAt: string; updatedAt: string; revision: number;
+  voided?: boolean;
 }
 export interface Audit { id: string; entity: string; entityId: string; at: string; before: unknown; after: unknown; }
 export interface State {

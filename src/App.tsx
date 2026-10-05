@@ -10,6 +10,9 @@ import CloudSetup from './CloudSetup';
 import { BrandMark } from './Brand';
 import { InstallControls } from './Pwa';
 import { MoreMenu } from './MoreMenu';
+import { SaveRipple } from './WaterTheme';
+import { undoEntry } from '../shared/undo';
+import { waterPreviewState } from '../shared/waterPreview';
 import type { FirebaseOptions } from 'firebase/app';
 import { extendState, validateAction, validateCheckIn, type DailyCheckIn, type FinancialAction, type LeakReview } from '../shared/actions';
 import { detectLeaks, type FinancialLeak } from '../shared/leaks';
@@ -21,7 +24,8 @@ import { ReconciliationForm } from './Reconciliation';
 import { validateReconciliation } from '../shared/reconciliation';
 import { FinancialLeakPanel } from './awareness';
 type Mode = 'loading' | 'local' | 'cloud' | 'login' | 'setup' | 'error';
-const storageKey = 'cash-flow-tracker-v1';
+const visualPreview = new URLSearchParams(window.location.search).get('preview') === 'water';
+const storageKey = visualPreview ? 'cash-flow-water-preview' : 'cash-flow-tracker-v1';
 const navigation = [{ name: 'Dashboard' as Page, icon: LayoutDashboard }, { name: 'Transactions' as Page, icon: ArrowLeftRight }, { name: 'Budget' as Page, icon: Wallet }, { name: 'Accounts' as Page, icon: CreditCard }, { name: 'Insights' as Page, icon: BarChart3 }];
 const pageTitles: Record<Page, string> = {
   Dashboard: 'Dashboard',
@@ -61,6 +65,8 @@ export default function App() {
   const [transactionOpen, setTransactionOpen] = useState(false), [edit, setEdit] = useState<Transaction>(), [accountEdit, setAccountEdit] = useState<Account>(), [budgetEdit, setBudgetEdit] = useState<Budget>();
   const [fundingEdit, setFundingEdit] = useState<Budget>(), [settingsOpen, setSettingsOpen] = useState(false), [sourceOpen, setSourceOpen] = useState(false), [sourceEdit, setSourceEdit] = useState<IncomeSource>();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [undo, setUndo] = useState<{ id: string; revision: number }>();
+  const [undoBusy, setUndoBusy] = useState(false);
   const [draftType, setDraftType] = useState<TransactionType>('Expense');
   const [comparisonAccount, setComparisonAccount] = useState<Account>();
   const [clock, setClock] = useState(() => new Date());
@@ -70,6 +76,11 @@ export default function App() {
   async function load() {
     setError(''); setRefreshing(true);
     try {
+      if (visualPreview) {
+        const saved = localStorage.getItem(storageKey);
+        setState(saved ? extendState(JSON.parse(saved)) : waterPreviewState());
+        setMode('local'); return;
+      }
       let status = await api<{ configured: boolean; authenticated: boolean; aiEnabled: boolean; backend?: string; sheetsExportEnabled?: boolean; firebase?: FirebaseOptions }>('status');
       if (status.backend === 'firestore' && status.firebase) {
         setFirebaseConfig(status.firebase);
@@ -84,6 +95,14 @@ export default function App() {
     } catch (e) { setError((e as Error).message); setMode('error'); } finally { setRefreshing(false); }
   }
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (reduced.matches || document.hidden || document.documentElement.dataset.entryOpen === 'true') return;
+    const animation = document.querySelector('main')?.animate([{ opacity: .8 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+    const cancel = () => animation?.cancel();
+    reduced.addEventListener('change', cancel);
+    return () => { cancel(); reduced.removeEventListener('change', cancel); };
+  }, [page]);
   useEffect(() => {
     const update = () => setClock(new Date());
     const timer = setInterval(update, 30000);
@@ -100,7 +119,7 @@ export default function App() {
     window.addEventListener('storage', changed);
     return () => window.removeEventListener('storage', changed);
   }, [mode]);
-  useEffect(() => { if (!message) return; const id = setTimeout(() => setMessage(''), 5000); return () => clearTimeout(id); }, [message]);
+  useEffect(() => { if (!message) return; const id = setTimeout(() => { setMessage(''); setUndo(undefined); }, 5000); return () => clearTimeout(id); }, [message, undo?.id, undo?.revision]);
   function saveLocal(next: State) { localStorage.setItem(storageKey, JSON.stringify(next)); setState(next); }
   async function applySaved(next: State) {
     if (mode === 'local') { saveLocal(next); return; }
@@ -116,7 +135,20 @@ export default function App() {
     const result = mode === 'cloud' ? await api<Transaction>('transactions', input) : validateTransaction(input, base, previous);
     const next = { ...base, transactions: [...base.transactions.filter(t => t.id !== result.id), result], audit: [...base.audit, audit('transaction', result.id, previous ?? null, result)] };
     await applySaved(next);
-    setMessage(previous ? 'Transaction updated.' : 'Transaction saved.');
+    setUndo({ id: result.id, revision: result.revision });
+    setMessage('Saved');
+  }
+  async function undoSave() {
+    if (!undo || undoBusy) return;
+    setUndoBusy(true);
+    try {
+      const base = mode === 'local' ? localSnapshot() : state;
+      const restored = mode === 'cloud' ? (await api<{ transaction: Transaction | null }>(`transactions/${undo.id}/undo`, { revision: undo.revision })).transaction : undoEntry(base, undo.id, undo.revision).restored;
+      const current = base.transactions.find(transaction => transaction.id === undo.id);
+      const next = { ...base, transactions: [...base.transactions.filter(transaction => transaction.id !== undo.id), ...(restored ? [restored] : [])], audit: [...base.audit, audit('transaction undo', undo.id, current, restored)] };
+      await applySaved(next); setMessage('Undone'); setUndo(undefined);
+    } catch (error) { setMessage((error as Error).message); setUndo(undefined); }
+    finally { setUndoBusy(false); }
   }
   async function saveBalance(balanceCents: number, asOf = localMinute()) {
     const base = mode === 'local' ? localSnapshot() : state;
@@ -185,16 +217,17 @@ export default function App() {
   if (mode === 'login') return <Login google={Boolean(firebaseConfig)} onSuccess={() => void load()} />;
   if (mode === 'loading' || mode === 'error') return <div className="login-screen"><div className="panel login-card"><BrandMark /><h1>{mode === 'loading' ? 'Loading tracker…' : 'Connection unavailable'}</h1>{mode === 'loading' ? <LoaderCircle className="spin" /> : <><p role="alert">{error}</p><button className="button primary" onClick={() => void load()}>Try again<RefreshCw size={17} /></button></>}</div></div>;
   return <div className="app-shell" data-page={page}>
+    <SaveRipple />
     <a className="skip-link" href="#main">Skip to content</a>
     <aside className="sidebar">
       <a href="#" className="brand" onClick={e => { e.preventDefault(); navigate('Dashboard'); }}><BrandMark /><span>Cash Flow<span className="brand-sub">TRACKER</span></span></a>
       <nav aria-label="Main navigation">{navigation.map(({ name, icon: Icon }) => <button key={name} aria-label={name} className={`nav-link ${page === name ? 'active' : ''}`} aria-current={page === name ? 'page' : undefined} onClick={() => navigate(name)}><Icon size={20} /><span>{name === 'Dashboard' ? 'Home' : name}</span></button>)}</nav>
-      <div className="sidebar-bottom"><button className="nav-link" aria-label="More" onClick={() => setMoreOpen(true)}><MoreHorizontal size={20} /><span>More</span></button></div>
+      <div className="sidebar-bottom"><button className="nav-link" aria-label="Advanced" onClick={() => setMoreOpen(true)}><MoreHorizontal size={20} /><span>Advanced</span></button></div>
     </aside>
     <div className="main-shell">
-    <header className="topbar"><a href="#" className="mobile-brand" onClick={e => { e.preventDefault(); navigate('Dashboard'); }}><BrandMark /><span>Cash Flow</span></a><button className="icon-button" aria-label="More" onClick={() => setMoreOpen(true)}><MoreHorizontal size={24} /></button></header>
+    <header className="topbar"><a href="#" className="mobile-brand" onClick={e => { e.preventDefault(); navigate('Dashboard'); }}><BrandMark /><span>Cash Flow</span></a><button className="icon-button" aria-label="Advanced" onClick={() => setMoreOpen(true)}><MoreHorizontal size={24} /></button></header>
     <main id="main" className="main-content"><div className="page-heading"><div><h1>{pageTitles[page]}</h1></div>{page !== 'Notes & Reminders' && <button className="button primary heading-add" onClick={add}><Plus size={18} /><span>Add transaction</span></button>}</div>{page === 'Dashboard' && <BalanceHero state={state} onAccounts={() => { navigate('Accounts'); setScope('All'); }} />}<div className="view-toolbar">{page !== 'Notes & Reminders' && <div className="month-picker"><button className="icon-button" aria-label="Previous month" onClick={() => setMonth(stepMonth(month, -1))}><ChevronLeft size={18} /></button><label><CalendarDays size={17} /><span>{monthLabel(month)}</span><input aria-label="Select month" type="month" value={month} onChange={e => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(e.target.value)) setMonth(e.target.value); }} /></label><button className="icon-button" aria-label="Next month" onClick={() => setMonth(stepMonth(month, 1))}><ChevronRight size={18} /></button></div>}<div className="segmented scope-picker" aria-label="Account scope" style={page === 'Check-In History' ? { display: 'none' } : undefined}>{(['Personal', 'Business', 'All'] as const).map(s => <button key={s} aria-pressed={scope === s} className={scope === s ? 'active' : ''} onClick={() => setScope(s)}>{s}</button>)}</div></div>
-      {mode === 'local' && page === 'Dashboard' && <div className="local-notice"><span className="status-dot local" /><span>Saved on this device</span><button className="text-button" onClick={() => setHelp(true)}>Backup<ArrowRight size={14} /></button></div>}
+      {mode === 'local' && page === 'Dashboard' && <div className="local-notice"><span className="status-dot local" /><span>{visualPreview ? 'Preview · sample data' : 'Saved on this device'}</span><button className="text-button" onClick={() => setHelp(true)}>Backup<ArrowRight size={14} /></button></div>}
       {page === 'Dashboard' && <Dashboard state={state} month={month} scope={scope} onEdit={onEdit} go={navigate} awareness={<DailyCheckInCard state={state} today={today} onConfirm={confirmCheckIn} onReview={reviewDay} />} />}{page === 'Transactions' && <Ledger state={state} month={month} scope={scope} onEdit={onEdit} add={add} presetDate={ledgerDate} />}{page === 'Budget' && <><BudgetView state={state} month={month} scope={scope} onEdit={setBudgetEdit} /><details className="panel disclosure-panel"><summary>Payment accounts &amp; due dates</summary><FundingSection state={state} month={month} scope={scope} onEdit={setFundingEdit} /></details></>}{page === 'Accounts' && <AccountsView state={state} month={month} scope={scope} onEdit={setAccountEdit} onReconcile={setComparisonAccount} />}{page === 'Insights' && <><Insights state={state} month={month} scope={scope} /><div className="awareness-after"><FinancialLeakPanel state={state} month={month} scope={scope} today={today} onCreate={addAction} onDismiss={dismissLeak} onEditTransaction={onEdit} /></div></>}
       {page === 'Money Flow' && <MoneyFlow state={state} month={month} scope={scope} onAddSource={() => { setSourceEdit(undefined); setSourceOpen(true); }} onEditSource={s => { setSourceEdit(s); setSourceOpen(true); }} />}
       {page === 'Check-In History' && <CheckInHistory key={month} state={state} month={month} today={today} onConfirm={confirmCheckIn} onReview={reviewDay} />}
@@ -202,7 +235,7 @@ export default function App() {
       {page === 'Notes & Reminders' && <NotesReminders state={state} scope={scope} today={today} onAdd={() => addAction()} onEdit={editAction} onSave={saveAction} />}</main></div>
     {page !== 'Notes & Reminders' && <button className="mobile-add" aria-label="Add transaction" onClick={add}><Plus size={23} /><span>Add transaction</span></button>}<nav className="mobile-nav" aria-label="Mobile navigation">{navigation.filter(item => ['Dashboard', 'Transactions', 'Budget', 'Accounts', 'Insights'].includes(item.name)).map(({ name, icon: Icon }) => <button key={name} aria-label={name} className={page === name ? 'active' : ''} aria-current={page === name ? 'page' : undefined} onClick={() => { setPage(name); setLedgerDate(''); window.scrollTo({ top: 0 }); }}><Icon size={21} /><span>{name === 'Transactions' ? 'Entries' : name === 'Dashboard' ? 'Home' : name}</span></button>)}</nav>
     {moreOpen && <MoreMenu local={mode === 'local'} refreshing={refreshing} onClose={() => setMoreOpen(false)} onNavigate={navigate} onSettings={() => setSettingsOpen(true)} onStorage={() => setHelp(true)} onRefresh={() => void load()} />}
-    <div className={`toast ${message ? 'visible' : ''}`} role="status" aria-live="polite">{message && <><Check size={17} />{message}</>}</div>
+    <div className={`toast ${message ? 'visible' : ''}`} role="status" aria-live="polite">{message && <><Check size={17} />{message}{message === 'Saved' && undo && <button type="button" className="text-button" disabled={undoBusy} onClick={() => void undoSave()}>{undoBusy ? 'Undoing…' : 'Undo'}</button>}</>}</div>
     {fundingEdit && <FundingForm state={state} budget={fundingEdit} month={month} onSave={saveFunding} onClose={() => setFundingEdit(undefined)} />}
     {settingsOpen && <SettingsForm state={state} onSave={saveSettings} onClose={() => setSettingsOpen(false)} />}
     {sourceOpen && <IncomeSourceForm state={state} edit={sourceEdit} onSave={saveSource} onClose={() => setSourceOpen(false)} />}

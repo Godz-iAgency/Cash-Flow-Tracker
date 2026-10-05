@@ -45,9 +45,9 @@ for (const width of [320, 497, 768, 1440]) test(`More scrolls to tools and expor
   const state = initialState();
   await page.addInitScript(data => localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(data)), state);
   await page.setViewportSize({ width, height: 450 }); await open(page);
-  await page.getByRole('button', { name: 'More', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'More', exact: true });
-  const content = dialog.getByRole('region', { name: 'More content' });
+  await page.getByRole('button', { name: 'Advanced', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Advanced', exact: true });
+  const content = dialog.getByRole('region', { name: 'Advanced content' });
   const before = await page.evaluate(() => scrollY);
   expect(await content.evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(100);
   const box = await content.boundingBox(); const x = box!.x + box!.width / 2, y = box!.y + box!.height * .8;
@@ -81,7 +81,7 @@ for (const width of [320, 497, 768, 1440]) test(`More scrolls to tools and expor
 
 test('More backup is reachable in the supplied 497px tablet layout', async ({ page }) => {
   await page.setViewportSize({ width: 497, height: 842 }); await open(page);
-  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Advanced', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: 'Storage & backup', exact: true }).click();
   const storage = page.getByRole('dialog', { name: 'Storage & backup', exact: true });

@@ -8,7 +8,8 @@ export function IconBox({ type, small = false }: { type: TransactionType; small?
 }
 export function Progress({ value, className = '' }: { value: number; className?: string }) {
   const percentage = Math.max(0, Math.min(100, value));
-  return <div className={`progress ${value > 100 ? 'over' : ''} ${className}`} role="progressbar" aria-valuenow={Math.round(percentage)} aria-valuemin={0} aria-valuemax={100} aria-label="Budget used"><span style={{ width: `${percentage}%` }} /></div>;
+  const left = 100 - percentage;
+  return <div className={`progress ${value > 100 ? 'over' : ''} ${className}`} role="progressbar" aria-valuenow={Math.round(left)} aria-valuemin={0} aria-valuemax={100} aria-label="Budget left"><span style={{ width: `${left}%` }} /></div>;
 }
 export function Empty({ title, text, action, onClick }: { title: string; text: string; action?: string; onClick?: () => void }) {
   return <div className="empty"><span className="empty-icon"><Leaf size={24} /></span><h3>{title}</h3><p>{text}</p>{action && <button className="button secondary" onClick={onClick}>{action}</button>}</div>;

@@ -1,0 +1,69 @@
+/* Paint and motion only: established widths, spacing and responsive layout stay intact. */
+:root, body { color: var(--text); background: var(--canvas); }
+.sidebar, .topbar, .mobile-nav { background: var(--chrome); }
+.brand, h1, h2, h3, strong, label, legend { color: var(--text); }
+.brand-mark { background: var(--canvas); border-color: var(--border); }
+.panel, .money-card, .ledger-summary, .modal { background: linear-gradient(145deg, var(--surface-glint), var(--surface)); box-shadow: 0 10px 28px var(--shadow), 0 0 24px var(--glow), inset 0 1px var(--border); }
+.modal-heading, .modal-footer { background: var(--surface); }
+.modal-footer { box-shadow: 0 -12px 18px var(--surface); }
+.modal-backdrop { background: var(--shade); backdrop-filter: none; }
+input, select, textarea, .amount-input { color: var(--text); background: var(--raised); border-color: var(--border); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+button, a, input, select, textarea { transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease; }
+.button:hover { transform: none; }
+.spin { animation: none; }
+.primary, .mobile-add, .segmented button.active, .nav-link.active, .mobile-nav button.active { background: var(--button); color: var(--button-text); }
+.primary, .mobile-add { box-shadow: 0 4px 20px var(--glow); border-color: var(--border); }
+.primary:hover { background: var(--button-hover); }
+.primary *, .segmented button.active *, .nav-link.active *, .mobile-nav button.active * { color: inherit; }
+.text-button, .ai-link, .details-toggle { color: var(--link); }
+.text-button:hover { color: var(--text); }
+.skip-link { background: var(--button); color: var(--button-text); }
+.local-notice .text-button { color: var(--link); }
+.secondary { background: var(--raised); color: var(--text); border-color: var(--border); }
+.secondary:hover, .transaction-row:hover, .more-links button:hover { background: var(--hover); }
+.segmented { background: var(--surface); }
+.money-card.highlight { background: linear-gradient(145deg, var(--hero-glow), var(--surface)); border-color: var(--border); }
+.money-card.highlight.negative { background: var(--danger-wash); border-color: var(--border); }
+.highlight .money-card-top, .highlight p { color: var(--muted); }
+.money-icon, .icon-box, .empty-icon, .bank-mark, .business .bank-mark { background: var(--raised); border-color: var(--border); color: var(--link); }
+.icon-box.small { background: transparent; }
+.icon-box.income, .transaction-amount.income strong, .green-text, .check-status.complete, .reconciliation-status.matched { color: var(--success); }
+.money-card.income h2, .account-flows > div:first-child strong { color: var(--success); }
+.icon-box.transfer, .transaction-amount.transfer strong { color: var(--muted); }
+.red-text, .form-error, .modal .form-error, .reconciliation-status.review-needed { color: var(--danger); }
+.form-error, .reconciliation-status.review-needed { background: var(--danger-wash); border-color: var(--border); }
+.check-status.complete, .reconciliation-status.matched { background: var(--success-wash); }
+.check-status, .tag, .priority-tag { color: var(--muted); background: var(--raised); }
+.check-calendar .complete { background: var(--success-wash); }
+.income-dot::before, .income-bar { background: var(--success); }
+.expense-dot::before, .expense-bar { background: var(--link); }
+.balance-hero { position: relative; isolation: isolate; background: radial-gradient(ellipse at 50% 115%, var(--hero-glow), var(--surface) 78%); border-color: var(--border); box-shadow: 0 0 28px var(--glow), inset 0 1px var(--border); }
+.hero-total { position: relative; z-index: 1; }
+.hero-total > strong, .hero-total > span:first-child { color: var(--text); }
+.hero-total > p, .balance-missing { color: var(--muted); }
+.home-wave { position: absolute; z-index: 0; pointer-events: none; bottom: 0; left: 0; width: 200%; height: 48px; fill: var(--wave); stroke: var(--wave-line); stroke-width: .6; will-change: transform; animation: water-drift 28s linear infinite; }
+@keyframes water-drift { to { transform: translateX(-50%); } }
+:root[data-background='true'] .home-wave, :root[data-entry-open='true'] .home-wave { animation-play-state: paused; }
+.progress { background: var(--raised); overflow: hidden; border-radius: 999px; }
+.progress > span, .progress[class*='color-'] > span { border-radius: 999px 999px 8px 8px; background: linear-gradient(0deg, var(--button), var(--link)); box-shadow: inset 0 1px var(--wave-line); transform-origin: bottom; animation: water-fill 280ms ease-out; }
+.progress.over > span { background: var(--coral); }
+@keyframes water-fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.page-fade { animation: water-fade 180ms ease-out both; }
+@keyframes water-fade { from { opacity: .72; } to { opacity: 1; } }
+.save-ripple { position: fixed; z-index: 120; width: 32px; height: 32px; margin: -16px; border: 1px solid var(--link); border-radius: 50%; pointer-events: none; animation: water-ripple 280ms ease-out both; }
+@keyframes water-ripple { from { opacity: .55; transform: scale(.4); } to { opacity: 0; transform: scale(2); } }
+.toast { background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: 0 8px 24px var(--shadow); }
+.toast > svg { color: var(--success); }
+.toast button { color: var(--link); }
+.appearance-setting { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.appearance-setting > span { display: block; color: var(--muted); margin-bottom: 10px; }
+.appearance-setting .segmented { max-width: 240px; }
+/* Entry gets no decorative effects, including a Home wave behind its dialog. */
+:root[data-entry-open='true'] *, :root[data-entry-open='true'] *::before, :root[data-entry-open='true'] *::after { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .save-ripple { display: none; }
+  .home-wave { will-change: auto; }
+}
+@media print { .home-wave, .save-ripple { display: none; } }

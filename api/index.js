@@ -82,7 +82,7 @@ var headers = {
   categories: ["id", "name"],
   budgets: ["id", "label", "category", "amountCents", "scope", "month"],
   income: ["id", "label", "amountCents", "scope", "month"],
-  transactions: ["id", "date", "time", "type", "amountCents", "category", "subcategory", "merchant", "description", "accountId", "toAccountId", "scope", "classification", "notes", "createdAt", "updatedAt", "revision"],
+  transactions: ["id", "date", "time", "type", "amountCents", "category", "subcategory", "merchant", "description", "accountId", "toAccountId", "scope", "classification", "notes", "createdAt", "updatedAt", "revision", "voided"],
   audit: ["id", "entity", "entityId", "at", "before", "after"],
   notesReminders: ["id", "title", "note", "category", "relatedExpenseId", "relatedAccountId", "scope", "priority", "status", "reminderDate", "amountAffectedCents", "previousCostCents", "newCostCents", "monthlySavingsCents", "annualizedSavingsCents", "createdAt", "completedAt", "updatedAt", "revision"],
   dailyCheckIns: ["id", "date", "scope", "confirmedAt", "transactionFingerprint", "revision", "completed", "completedAt", "transactionsReviewed"],
@@ -153,7 +153,7 @@ async function initialize() {
   const writes = [];
   names.forEach((table, i) => {
     const row = existing.valueRanges[i]?.values?.[0] ?? [];
-    const legacyLength = table === "dailyCheckIns" ? 6 : table === "accounts" ? 7 : 0;
+    const legacyLength = table === "dailyCheckIns" ? 6 : table === "accounts" ? 7 : table === "transactions" ? 17 : 0;
     if (legacyLength && row.length === legacyLength && row.join("|") === sheetHeaders(table).slice(0, legacyLength).join("|")) {
       writes.push({ updateCells: { start: { sheetId: ids[table], rowIndex: 0, columnIndex: legacyLength }, fields: "userEnteredValue", rows: [cells(sheetHeaders(table).slice(legacyLength))] } });
     } else if (row.length && row.join("|") !== sheetHeaders(table).join("|")) throw new Error(`The ${sheetName(table)} sheet has an incompatible header. Existing data has not been overwritten; review the header before retrying.`);
@@ -187,9 +187,13 @@ async function readState() {
       if (key === "dueDay") value = value === "" ? null : Number(value);
       if (key === "transactionsReviewed") value = value === "" ? void 0 : Number(value);
       if (key === "autopay" || key === "completed") value = value === "" && key === "completed" ? void 0 : value === true || value === "true";
+      if (key === "voided") value = value === true || value === "true" ? true : void 0;
       if (key === "before" || key === "after") value = value ? JSON.parse(String(value)) : null;
       return [key, value];
     })));
+    if (table === "transactions") {
+      for (const record of records) if (record.voided === void 0) delete record.voided;
+    }
     if (table === "dailyCheckIns") for (const record of records) {
       record.completed ??= true;
       record.completedAt ||= record.confirmedAt;
@@ -466,10 +470,10 @@ var FirestoreStore = class {
     }));
     return { state, revision: meta.data().revision };
   }
-  async readState() {
+  async readState(includeCancelled = false) {
     const current = this.scope.getStore();
-    if (current) return current.state;
-    return this.db.runTransaction(async (transaction) => (await this.snapshot(transaction)).state, { readOnly: true });
+    const state = current ? current.state : await this.db.runTransaction(async (transaction) => (await this.snapshot(transaction)).state, { readOnly: true });
+    return includeCancelled ? state : { ...state, transactions: state.transactions.filter((transaction) => !transaction.voided) };
   }
   async mutate(operation) {
     return this.db.runTransaction(async (transaction) => {
@@ -516,7 +520,10 @@ function cloudStore() {
   if (!store) throw new Error("An authenticated cloud user is required.");
   return store;
 }
-var readState2 = () => firestoreEnabled() ? cloudStore().readState() : readState();
+var readState2 = async (includeCancelled = false) => {
+  const state = await (firestoreEnabled() ? cloudStore().readState(includeCancelled) : readState());
+  return includeCancelled ? state : { ...state, transactions: state.transactions.filter((transaction) => !transaction.voided) };
+};
 var mutate2 = (operation) => firestoreEnabled() ? cloudStore().mutate(operation) : mutate(operation);
 var writeRecords2 = (writes) => firestoreEnabled() ? cloudStore().writeRecords(writes) : writeRecords(writes);
 
@@ -697,6 +704,21 @@ function detectLeaks(state, month, scope) {
   return results;
 }
 
+// shared/undo.ts
+function undoEntry(state, id, revision2, now = Date.now()) {
+  const current = state.transactions.find((transaction) => transaction.id === id);
+  if (!current || current.revision !== revision2) throw new Error("This entry changed. Refresh before editing it.");
+  const saved = [...state.audit].reverse().find((audit) => audit.entityId === id && (audit.entity === "transaction" || audit.entity === "transaction undo"));
+  if (!saved || saved.entity !== "transaction" || saved.after?.revision !== revision2) throw new Error("This save can no longer be undone. Open the entry to edit it.");
+  const elapsed = now - Date.parse(saved.at);
+  if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > 15e3) throw new Error("Undo has expired. Open the entry to edit it.");
+  if (state.accounts.some((account) => [current.accountId, current.toAccountId].includes(account.id) && account.balanceUpdatedAt && Date.parse(account.balanceUpdatedAt) > Date.parse(saved.at))) throw new Error("A bank balance changed after this save. Open the entry to review it.");
+  const previous = saved.before;
+  const restored = previous ? validateTransaction({ ...previous, revision: revision2 }, state, current) : null;
+  const stored = restored ?? { ...current, voided: true, revision: revision2 + 1, updatedAt: new Date(now).toISOString() };
+  return { current, restored, stored };
+}
+
 // server/app.ts
 function createApp({ hosted = process.env.VERCEL === "1" } = {}) {
   const app = express();
@@ -834,13 +856,23 @@ function createApp({ hosted = process.env.VERCEL === "1" } = {}) {
   app.get("/api/state", async (_req, res) => res.json(await readState2()));
   app.post("/api/transactions", async (req, res) => {
     const result = await mutate2(async () => {
-      const state = await readState2();
+      const state = await readState2(true);
       const previous = state.transactions.find((t) => t.id === req.body?.id);
+      if (previous?.voided) throw new Error("This save was undone. Start a new entry instead.");
       if (previous && !req.body?.revision) throw new Error("Transaction already exists.");
       const transaction = validateTransaction(req.body, state, previous);
       const audit = { id: randomUUID(), entity: "transaction", entityId: transaction.id, at: transaction.updatedAt, before: previous ?? null, after: transaction };
       await writeRecords2([{ table: "transactions", records: [transaction] }, { table: "audit", records: [audit] }]);
       return transaction;
+    });
+    res.json(result);
+  });
+  app.post("/api/transactions/:id/undo", async (req, res) => {
+    const result = await mutate2(async () => {
+      const state = await readState2();
+      const { current, restored, stored } = undoEntry(state, String(req.params.id), req.body?.revision);
+      await writeRecords2([{ table: "transactions", records: [stored] }, { table: "audit", records: [{ id: randomUUID(), entity: "transaction undo", entityId: current.id, at: (/* @__PURE__ */ new Date()).toISOString(), before: current, after: restored }] }]);
+      return { transaction: restored };
     });
     res.json(result);
   });

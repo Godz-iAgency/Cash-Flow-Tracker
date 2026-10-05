@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "concurrently -k \"tsx watch server/index.ts\" \"vite --host 0.0.0.0\"",
-    "build": "tsc --noEmit && node scripts/build-server.mjs && vite build && node scripts/build-service-worker.mjs",
+    "build": "node scripts/build-water-metadata.mjs && tsc --noEmit && node scripts/build-server.mjs && vite build && node scripts/build-service-worker.mjs",
     "build:server": "node scripts/build-server.mjs",
     "start": "tsx server/index.ts",
     "pretest": "node scripts/build-server.mjs",

@@ -34,10 +34,10 @@ export class FirestoreStore {
     })) as unknown as State;
     return { state, revision: meta.data()!.revision };
   }
-  async readState(): Promise<State> {
+  async readState(includeCancelled = false): Promise<State> {
     const current = this.scope.getStore();
-    if (current) return current.state;
-    return this.db.runTransaction(async transaction => (await this.snapshot(transaction)).state, { readOnly: true });
+    const state = current ? current.state : await this.db.runTransaction(async transaction => (await this.snapshot(transaction)).state, { readOnly: true });
+    return includeCancelled ? state : { ...state, transactions: state.transactions.filter(transaction => !transaction.voided) };
   }
   async mutate<T>(operation: () => Promise<T>): Promise<T> {
     return this.db.runTransaction(async transaction => {

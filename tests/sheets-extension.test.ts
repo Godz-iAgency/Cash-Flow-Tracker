@@ -49,7 +49,7 @@ test('Sheets extension adds only new tabs and preserves existing schemas, record
           replies.push({ addSheet: { properties: { title, sheetId: id } } });
         } else if (request.updateCells) {
           const start = request.updateCells.start, sheet = [...sheets.values()].find(s => s.id === start.sheetId)!;
-          assert.equal(start.rowIndex, 0); assert.ok((start.sheetId === 1 && start.columnIndex === 7) || (start.sheetId === 7 && start.columnIndex === 6));
+          assert.equal(start.rowIndex, 0); assert.ok((start.sheetId === 1 && start.columnIndex === 7) || (start.sheetId === 7 && start.columnIndex === 6) || (start.sheetId === 5 && start.columnIndex === 17));
           sheet.rows[0].push(...request.updateCells.rows[0].values.map((cell: any) => cell.userEnteredValue.stringValue)); replies.push({});
         } else if (request.appendCells) {
           const sheet = [...sheets.values()].find(sheet => sheet.id === request.appendCells.sheetId)!;
@@ -75,6 +75,7 @@ test('Sheets extension adds only new tabs and preserves existing schemas, record
     for (const [name, original] of before) { const after = sheets.get(name)!; assert.deepEqual(after.rows.slice(1), original.rows.slice(1)); assert.deepEqual(after.rows[0].slice(0, original.rows[0].length), original.rows[0]); }
     assert.deepEqual(sheets.get('Daily_Checkins')!.rows[1], oldCheckInRow);
     assert.equal(sheets.get('accounts')!.rows[0][7], 'balanceIncludedTransactionIds');
+    assert.equal(sheets.get('transactions')!.rows[0][17], 'voided');
     assert.deepEqual(sheets.get('Daily_Checkins')!.rows[0].slice(6), ['completed', 'completed_at', 'transactions_reviewed']);
     assert.deepEqual(state.transactions, [transaction]); assert.equal(state.accounts[3].lastFour, '0366');
     assert.deepEqual(state.notesReminders, []); assert.equal(state.dailyCheckIns[0].completed, true); assert.equal(state.dailyCheckIns[0].transactionsReviewed, 0); assert.deepEqual(state.leakReviews, []);

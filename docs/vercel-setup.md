@@ -52,7 +52,7 @@ After saving the environment variables, open Deployments and redeploy the latest
 
 Then open the website and sign in using christopher@godz-iagency.com. If Firestore already has records for that Google user, the Dashboard opens. Otherwise choose cash-flow-backup-2026-10-04.json, review the records, confirm, and select Import & open tracker. Browser records from localhost do not appear automatically at the hosted domain. The backup is the portable copy; a completed import is shared through Firestore across local and hosted logins to the same Firebase user.
 
-Finally use More → Storage & backup → Export to Google Sheets. A snapshot adds fourteen new dated report tabs; existing tabs and Firestore records are preserved. Scheduled synchronization is not enabled.
+Finally use Advanced → Storage & backup → Export to Google Sheets. A snapshot adds fourteen new dated report tabs; existing tabs and Firestore records are preserved. Scheduled synchronization is not enabled.
 
 ## Local preview
 

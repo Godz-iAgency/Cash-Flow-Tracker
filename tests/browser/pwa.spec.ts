@@ -20,7 +20,7 @@ test('manifest, home-screen icons and service worker are valid; private response
   expect(urls.length).toBe(6); expect(urls.every(url => !url.includes('/api/'))).toBe(true);
   await page.context().setOffline(true); await page.reload();
   await expect(page.getByRole('heading', { name: 'Connect to open your tracker' })).toBeVisible();
-  await expect(page.locator('body')).toContainText('internet connection');
+  await expect(page.locator('body')).toContainText('Connect to the internet');
   await page.context().setOffline(false); await page.getByRole('link', { name: 'Try again' }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 });
@@ -53,7 +53,7 @@ test('a new version waits while a financial draft is open and updates only on re
   await page.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting));
   await expect(form.locator('#merchant')).toHaveValue('Unsaved draft'); expect(await page.evaluate(() => localStorage.getItem('cash-flow-tracker-v1'))).toBe(before);
   await form.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.getByRole('button', { name: 'More', exact: true }).click(); await page.getByRole('button', { name: 'Update app', exact: true }).click();
+  await page.getByRole('button', { name: 'Advanced', exact: true }).click(); await page.getByRole('button', { name: 'Update app', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
   await page.waitForFunction(async () => !(await navigator.serviceWorker.getRegistration())?.waiting);
   expect(await page.evaluate(() => localStorage.getItem('cash-flow-tracker-v1'))).toBe(before);

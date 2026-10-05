@@ -38,7 +38,11 @@ Open http://localhost:3001. No financial credentials are bundled in the frontend
 
 Phones use bottom navigation and a persistent Add transaction button. Tablets use a compact sidebar, while laptops and desktops use wider card layouts. Forms become bottom sheets on phones. Layouts include safe-area spacing, keyboard focus management, reduced-motion support, and print styles. Money is always displayed to two decimal places.
 
-The five main pages are Home, Transactions, Budget, Accounts and Insights. **More** holds Notes & Reminders, Money Flow, Check-In History, Month-End Review, Settings, Storage & backup, Refresh data and installation/update controls. Payment-account plans and balance calculations expand on request. Charts and spending flags appear in Insights. See [the interface simplification audit](docs/simplification-audit.md).
+The five main pages are Home, Transactions, Budget, Accounts and Insights. **Advanced** holds Notes & Reminders, Money Flow, Check-In History, Month-End Review, Settings, Storage & backup, Refresh data, appearance and installation/update controls. Payment-account plans and balance calculations expand on request. Charts and spending flags appear in Insights. See [the interface simplification audit](docs/simplification-audit.md).
+
+## Water appearance
+
+The calm navy and aqua theme defaults to dark. Choose **Advanced → Appearance → Light** for the optional light version. All colors are centralized in `src/water-tokens.css`. The original logo, layout and financial workflows remain intact. See [the water appearance guide](docs/water-theme.md) for motion, save Undo, contrast verification and the isolated sample preview.
 
 ## Source data and assumptions
 

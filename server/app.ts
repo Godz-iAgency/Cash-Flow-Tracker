@@ -11,6 +11,7 @@ import { validateAction, validateCheckIn } from '../shared/actions.js';
 import { balanceSnapshotIds, validSnapshot, validateFunding, validateIncomeSource, validateMonthReview, validateSettings } from '../shared/allocation.js';
 import { validateReconciliation } from '../shared/reconciliation.js';
 import { detectLeaks } from '../shared/leaks.js';
+import { undoEntry } from '../shared/undo.js';
 
 export function createApp({ hosted = process.env.VERCEL === '1' } = {}) {
   const app = express();
@@ -106,13 +107,23 @@ export function createApp({ hosted = process.env.VERCEL === '1' } = {}) {
   app.get('/api/state', async (_req, res) => res.json(await readState()));
   app.post('/api/transactions', async (req, res) => {
     const result = await mutate(async () => {
-      const state = await readState();
+      const state = await readState(true);
       const previous = state.transactions.find(t => t.id === req.body?.id);
+      if (previous?.voided) throw new Error('This save was undone. Start a new entry instead.');
       if (previous && !req.body?.revision) throw new Error('Transaction already exists.');
       const transaction = validateTransaction(req.body, state, previous);
       const audit = { id: randomUUID(), entity: 'transaction', entityId: transaction.id, at: transaction.updatedAt, before: previous ?? null, after: transaction };
       await writeRecords([{ table: 'transactions', records: [transaction] }, { table: 'audit', records: [audit] }]);
       return transaction;
+    });
+    res.json(result);
+  });
+  app.post('/api/transactions/:id/undo', async (req, res) => {
+    const result = await mutate(async () => {
+      const state = await readState();
+      const { current, restored, stored } = undoEntry(state, String(req.params.id), req.body?.revision);
+      await writeRecords([{ table: 'transactions', records: [stored] }, { table: 'audit', records: [{ id: randomUUID(), entity: 'transaction undo', entityId: current.id, at: new Date().toISOString(), before: current, after: restored }] }]);
+      return { transaction: restored };
     });
     res.json(result);
   });

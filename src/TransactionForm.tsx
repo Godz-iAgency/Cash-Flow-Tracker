@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CalendarDays, Check, LoaderCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import { localDate, parseCents, validateTransaction, type State, type Transaction, type TransactionType, type Scope } from '../shared/model';
 import { IconBox, Modal } from './components';
@@ -22,6 +22,12 @@ export default function TransactionForm({ state, edit, initialType = 'Expense', 
   const [error, setError] = useState(''), [saving, setSaving] = useState(false), [details, setDetails] = useState(Boolean(edit));
   const [aiOpen, setAiOpen] = useState(false), [aiText, setAiText] = useState(''), [aiBusy, setAiBusy] = useState(false), [review, setReview] = useState('');
   const id = useRef(edit?.id ?? crypto.randomUUID());
+  const saveLock = useRef(false);
+  useEffect(() => {
+    document.documentElement.dataset.entryOpen = 'true';
+    document.querySelector('main')?.getAnimations().forEach(animation => animation.cancel());
+    return () => { delete document.documentElement.dataset.entryOpen; };
+  }, []);
   const items = state.budgets.filter(b => b.category === category && b.scope === scope).filter((b, i, all) => all.findIndex(v => v.label === b.label) === i);
   async function draft() {
     setError(''); setAiBusy(true);
@@ -43,12 +49,17 @@ export default function TransactionForm({ state, edit, initialType = 'Expense', 
     } catch (e) { setError((e as Error).message); } finally { setAiBusy(false); }
   }
   async function submit(event: FormEvent) {
+    if (saveLock.current) { event.preventDefault(); return; }
+    saveLock.current = true;
     event.preventDefault(); setError(''); setSaving(true);
+    const button = (event.currentTarget as HTMLFormElement).querySelector<HTMLButtonElement>('button[type="submit"]');
+    const rect = button?.getBoundingClientRect();
     try {
       const transaction = validateTransaction({ id: id.current, type, amountCents: parseCents(amount), merchant, description, category, subcategory, accountId, toAccountId, scope, classification, date, time, notes, revision: edit?.revision }, state, edit);
       await onSave(edit ? { ...transaction, revision: edit.revision } : transaction);
       onClose();
-    } catch (e) { setError((e as Error).message); } finally { setSaving(false); }
+      if (rect) window.dispatchEvent(new CustomEvent('cash-flow-saved', { detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } }));
+    } catch (e) { setError((e as Error).message); } finally { saveLock.current = false; setSaving(false); }
   }
   return <Modal title={edit ? 'Edit transaction' : 'Add a transaction'} subtitle={edit ? 'Previous versions remain in audit history.' : undefined} onClose={onClose}>
     <form onSubmit={submit} className="transaction-form">

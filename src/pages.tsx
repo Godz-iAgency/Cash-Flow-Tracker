@@ -4,6 +4,7 @@ import { accountFlows, budgetSpent, currentMonth, localDate, money, monthBudgets
 import { dateLabel } from './financialActions';
 import { accountRoles, cashTotals, currentBalance, fundedExpenses, settingsFor } from '../shared/allocation';
 import { ReconciliationPanel } from './Reconciliation';
+import { WaterWave } from './WaterTheme';
 import { ActivityChart, Empty, MoneyCard, Progress, TransactionList, monthLabel } from './components';
 export type Page = 'Dashboard' | 'Transactions' | 'Budget' | 'Accounts' | 'Insights' | 'Notes & Reminders' | 'Money Flow' | 'Check-In History' | 'Month-End Review';
 type ViewProps = { state: State; month: string; scope: Scope | 'All' };
@@ -13,7 +14,7 @@ export function BalanceHero({ state, onAccounts }: { state: State; onAccounts: (
     <div className="hero-total"><span>Total cash</span><strong>{balances.total.unknown ? 'Not set' : money(balances.total.amountCents)}</strong>
       <p>Checking &amp; savings · All accounts</p>
       {balances.total.unknown > 0 && <><span className="balance-missing">{balances.total.unknown} balances to add{balances.total.amountCents !== 0 && ` · ${money(balances.total.amountCents)} known`}</span><button className="text-button" onClick={onAccounts}>Set balances<ArrowRight size={16} /></button></>}
-    </div>
+    </div><WaterWave />
   </section>;
 }
 export function Dashboard({ state, month, scope, onEdit, go, awareness }: ViewProps & { awareness?: ReactNode; onEdit: (t: Transaction) => void; go: (page: Page) => void }) {
@@ -24,7 +25,7 @@ export function Dashboard({ state, month, scope, onEdit, go, awareness }: ViewPr
   const recent = [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time) || String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''))).slice(0, 5);
   return <>
     <div className="money-grid">
-      <MoneyCard label="Income received" value={totals.income} icon={<ArrowDownLeft size={21} />} />
+      <MoneyCard label="Income received" value={totals.income} className="income" icon={<ArrowDownLeft size={21} />} />
       <MoneyCard label="Money spent" value={totals.expenses} icon={<ArrowUpRight size={21} />} />
       <MoneyCard label="Net cash flow" value={totals.net} className={`highlight ${totals.net < 0 ? 'negative' : ''}`} icon={<TrendingUp size={21} />} />
     </div>
@@ -39,7 +40,7 @@ export function Dashboard({ state, month, scope, onEdit, go, awareness }: ViewPr
       </section>
       <section className="panel recent-panel">
         <div className="panel-heading"><h2>Recent transactions</h2><button className="text-button" onClick={() => go('Transactions')}>View all<ArrowRight size={15} /></button></div>
-        {recent.length ? <TransactionList transactions={recent} state={state} onEdit={onEdit} compact /> : <p className="panel-note">No transactions yet.</p>}
+        {recent.length ? <TransactionList transactions={recent} state={state} onEdit={onEdit} compact /> : <p className="panel-note">Nothing logged yet.</p>}
       </section>
     </div>
   </>;

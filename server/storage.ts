@@ -12,6 +12,9 @@ export function cloudStore() {
   if (!store) throw new Error('An authenticated cloud user is required.');
   return store;
 }
-export const readState = () => firestoreEnabled() ? cloudStore().readState() : sheets.readState();
+export const readState = async (includeCancelled = false) => {
+  const state = await (firestoreEnabled() ? cloudStore().readState(includeCancelled) : sheets.readState());
+  return includeCancelled ? state : { ...state, transactions: state.transactions.filter(transaction => !transaction.voided) };
+};
 export const mutate = <T>(operation: () => Promise<T>) => firestoreEnabled() ? cloudStore().mutate(operation) : sheets.mutate(operation);
 export const writeRecords = (writes: RecordWrite[]) => firestoreEnabled() ? cloudStore().writeRecords(writes) : sheets.writeRecords(writes);

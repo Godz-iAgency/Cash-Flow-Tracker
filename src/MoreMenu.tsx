@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowLeftRight, BarChart3, CalendarDays, ClipboardList, RefreshCw, Settings, ShieldCheck } from 'lucide-react';
 import { Modal } from './components';
 import { InstallControls } from './Pwa';
+import { AppearanceSwitch } from './WaterTheme';
 import type { Page } from './pages';
 
 export function MoreMenu({ local, refreshing, onClose, onNavigate, onSettings, onStorage, onRefresh }: {
@@ -14,7 +15,7 @@ export function MoreMenu({ local, refreshing, onClose, onNavigate, onSettings, o
     { page: 'Month-End Review' as Page, label: 'View month-end review', icon: BarChart3 },
   ];
   function open(action: () => void) { onClose(); action(); }
-  return <Modal title="More" onClose={onClose}>
+  return <Modal title="Advanced" onClose={onClose}>
     <div className="more-menu">
       <div className="more-links">
         {tools.map(({ page, label, icon: Icon }) => <button key={page} aria-label={label} onClick={() => open(() => onNavigate(page))}><Icon size={20} /><span>{page}</span><ArrowRight size={16} /></button>)}
@@ -25,6 +26,7 @@ export function MoreMenu({ local, refreshing, onClose, onNavigate, onSettings, o
         <button disabled={refreshing} onClick={() => open(onRefresh)}><RefreshCw size={20} className={refreshing ? 'spin' : ''} /><span>Refresh data</span></button>
       </div>
       <div className="more-install"><InstallControls inlineHelp /><small>{local ? 'Saved on this device' : 'Cloud storage'}</small></div>
+      <AppearanceSwitch />
     </div>
   </Modal>;
 }

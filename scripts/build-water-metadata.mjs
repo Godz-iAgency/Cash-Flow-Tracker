@@ -1,0 +1,11 @@
+import { readFile, writeFile } from 'node:fs/promises';
+const tokens = await readFile('src/water-tokens.css', 'utf8');
+const canvas = tokens.match(/--canvas:\s*(#[a-f\d]{6})/i)?.[1];
+if (!canvas) throw new Error('The water palette needs a page background.');
+const manifest = JSON.parse(await readFile('public/manifest.webmanifest', 'utf8'));
+manifest.background_color = canvas; manifest.theme_color = canvas;
+await writeFile('public/manifest.webmanifest', JSON.stringify(manifest, null, 2) + '\n');
+const html = await readFile('index.html', 'utf8');
+await writeFile('index.html', html.replace(/(<meta name="theme-color" content=")[^"]+("\s*\/>)/, '$1' + canvas + '$2'));
+const offline = await readFile('scripts/offline-water.template.html', 'utf8');
+await writeFile('public/offline.html', offline.replaceAll('__WATER_CANVAS__', canvas).replaceAll('__WATER_TOKENS__', tokens));
