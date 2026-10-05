@@ -134,10 +134,14 @@ test('compiled hosted API starts in plain Node ESM without the development loade
   }
 });
 
-test('packaged Vercel JavaScript serves configured cloud status and rejects anonymous reads in plain Node', async () => environment(async () => {
+test('packaged API starts with Vercel module compatibility enabled and rejects anonymous reads', async () => environment(async () => {
   configure();
+  const deployment = JSON.parse(await readFile('vercel.json', 'utf8'));
+  assert.equal(deployment.env.NODE_OPTIONS, '--experimental-require-module');
   const entry = pathToFileURL(path.resolve('api/index.js')).href;
   const script = `import { createServer } from 'node:http'; const { default: app } = await import(${JSON.stringify(entry)}); const server = createServer(app); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const root = 'http://127.0.0.1:' + server.address().port; const response = await fetch(root + '/api/status'); const status = await response.json(); const data = await fetch(root + '/api/state'); console.log(JSON.stringify({ response: response.status, backend: status.backend, configured: status.configured, authenticated: status.authenticated, state: data.status, secretExposed: JSON.stringify(status).includes('private_key') })); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));`;
-  const { stdout } = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', script], { timeout: 45000, env: { ...process.env } });
+  // Vercel disables require(ESM) by default. Apply its documented opt-in last,
+  // so the real Firebase dependency graph is tested under that runtime setting.
+  const { stdout } = await promisify(execFile)(process.execPath, ['--no-experimental-require-module', deployment.env.NODE_OPTIONS, '--input-type=module', '-e', script], { timeout: 45000, env: { ...process.env } });
   assert.deepEqual(JSON.parse(stdout.trim()), { response: 200, backend: 'firestore', configured: true, authenticated: false, state: 401, secretExposed: false });
 }));

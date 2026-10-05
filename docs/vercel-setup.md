@@ -6,6 +6,8 @@ The repository builds the Vite frontend into dist and sends /api requests to api
 
 The hosted handler is generated from server/handler.ts by scripts/build-server.mjs. It bundles the internal server/shared module graph into ready-to-run Node 24 JavaScript while keeping installed packages external. The generated API file is checked in and rebuilt by npm run build and before npm test, so Vercel does not need to resolve internal TypeScript imports at runtime. No environment values are embedded during the build.
 
+The repository also sets the non-secret runtime option NODE_OPTIONS=--experimental-require-module in vercel.json. Vercel disables require(ESM) by default; Firebase Admin's jwks-rsa dependency requires the ESM-only jose package. This documented opt-in allows the installed dependency graph to load without downgrading packages. No additional private environment variable is needed. Reference: [Vercel module compatibility](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration#experimental-nodejs-require-of-es-module).
+
 ## 1. Project settings
 
 Open the Cash Flow Tracker project in Vercel. Under Settings → Build and Deployment, use the Vite preset, root directory at the repository root, Node.js 24.x, build command npm run build, and output directory dist. These build settings are also declared in vercel.json. No persistent server start command is needed on Vercel.
@@ -58,7 +60,7 @@ The private local cloud profile remains at localhost:3002. Its ignored .local/cl
 
 ## Validation and limits
 
-Production verification on October 4, 2026: Vercel reported deployment success for commit a79e480, but the public /api/status endpoint returned HTTP 500 FUNCTION_INVOCATION_FAILED. This hosting startup failure remains unresolved and requires the first runtime error from the Vercel Logs page; the public response does not identify its cause. Localhost:3002 returned HTTP 200 with Firestore configured. Passing local tests does not establish that production login or storage works.
+Production verification on October 4, 2026: the deployed API initially returned HTTP 500 FUNCTION_INVOCATION_FAILED. The owner's runtime log identified ERR_REQUIRE_ESM from jwks-rsa/src/utils.js loading jose/dist/webapi/index.js. Disabling require(ESM) locally reproduced that failure. The deployment configuration now enables Vercel's documented module compatibility option; the packaged API regression checks startup with that option applied after a simulated default disable. Production health is checked separately after deployment. Passing local tests does not establish that production login or storage writes work.
 
 The server/shared modules use explicit .js import paths so compiled TypeScript can start in Node ESM. Regression checks compile the full API module graph and separately serve the actual packaged JavaScript API in plain Node without tsx, preventing development-only module resolution from concealing startup failures. The final build and all 49 unit/security tests passed.
 
