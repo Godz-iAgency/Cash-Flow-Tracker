@@ -58,6 +58,8 @@ The private local cloud profile remains at localhost:3002. Its ignored .local/cl
 
 ## Validation and limits
 
+Production verification on October 4, 2026: Vercel reported deployment success for commit a79e480, but the public /api/status endpoint returned HTTP 500 FUNCTION_INVOCATION_FAILED. This hosting startup failure remains unresolved and requires the first runtime error from the Vercel Logs page; the public response does not identify its cause. Localhost:3002 returned HTTP 200 with Firestore configured. Passing local tests does not establish that production login or storage works.
+
 The server/shared modules use explicit .js import paths so compiled TypeScript can start in Node ESM. Regression checks compile the full API module graph and separately serve the actual packaged JavaScript API in plain Node without tsx, preventing development-only module resolution from concealing startup failures. The final build and all 49 unit/security tests passed.
 
 No live import or export was performed as part of hosting preparation. Server checks cover missing hosted configuration, JSON and local-file credentials, wrong-project and malformed credentials, public-status secret exclusion, owner-auth requirements, and HTTPS-origin validation through a proxy. Final production login and database/report writes depend on the environment variables, authorized domain and sharing being configured in their consoles.
