@@ -1,6 +1,8 @@
 # Cash Flow Tracker
 
-A private, mobile-first cash-flow ledger built with React, TypeScript, Vite, and a small Express server. Google Sheets is the connected database. Every amount is stored and calculated in whole cents.
+A private, mobile-first cash-flow ledger built with React, TypeScript, Vite, and a small Express server. Firestore is the recommended connected database; Google Sheets receives reviewed reporting snapshots, and legacy Sheets storage remains supported. Every amount is stored and calculated in whole cents.
+
+For the hosted app at https://cash-flow-tracker-godz-i.vercel.app, follow the [Vercel setup guide](docs/vercel-setup.md) for its exact environment variables, private server credential, Firebase authorized domain and first import. Pushes to the connected main branch deploy through Vercel. No local Windows server needs to stay running for the hosted app.
 
 ## Start locally
 

@@ -1,5 +1,5 @@
 import { JWT } from 'google-auth-library';
-import { readFileSync } from 'node:fs';
+import { readFirebaseServiceAccount, serviceAccountConfigured } from './credentials';
 import { randomBytes, randomInt } from 'node:crypto';
 import { initialState } from '../shared/seed';
 import type { State } from '../shared/model';
@@ -29,12 +29,11 @@ let ids: Partial<Record<Table, number>> = {};
 let initialized: Promise<void> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
 export const configured = () => Boolean(process.env.GOOGLE_SHEET_ID && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY);
-export const reportsConfigured = () => Boolean(process.env.GOOGLE_SHEET_ID && (configured() || process.env.FIREBASE_SERVICE_ACCOUNT_PATH));
+export const reportsConfigured = () => Boolean(process.env.GOOGLE_SHEET_ID && (configured() || serviceAccountConfigured()));
 const client = () => {
   let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL, key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  if ((!email || !key) && process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
-    try { const credential = JSON.parse(readFileSync(process.env.FIREBASE_SERVICE_ACCOUNT_PATH, 'utf8')); email = credential.client_email; key = credential.private_key; }
-    catch { throw new Error('The private service-account credential could not be read.'); }
+  if ((!email || !key) && serviceAccountConfigured()) {
+    const credential = readFirebaseServiceAccount(); email = credential.client_email; key = credential.private_key;
   }
   return new JWT({ email, key, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
 };

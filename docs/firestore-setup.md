@@ -8,6 +8,8 @@ The Cash Flow Tracker Firebase project, web app, default Firestore database in p
 
 ## Server configuration
 
+For the Vercel deployment, use the [Vercel setup guide](vercel-setup.md). Vercel uses FIREBASE_SERVICE_ACCOUNT_JSON instead of a local Windows file path, and APP_ORIGIN for the production HTTPS address. The following file-path instructions are for a local server.
+
 1. Keep the exported JSON backup. Keep the private Firebase Admin JSON outside this repository; move it out of Downloads into a private credentials folder when practical. Do not upload it to the website or GitHub.
 2. Set `STORAGE_BACKEND=firestore` in the server's private environment.
 3. Set `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, and `FIREBASE_APP_ID` from the registered web app. This web configuration is public; it is not an Admin credential.
