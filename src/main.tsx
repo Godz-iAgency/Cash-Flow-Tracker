@@ -3,5 +3,6 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles.css';
 import './theme.css';
+import { PwaProvider } from './Pwa';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><PwaProvider><App /></PwaProvider></React.StrictMode>);

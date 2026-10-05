@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Cash Flow Tracker",
+  "short_name": "Cash Flow",
+  "description": "Your private cash flow, accounts and budget.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090c08",
+  "theme_color": "#090c08",
+  "lang": "en-US",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

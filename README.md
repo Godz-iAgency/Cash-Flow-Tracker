@@ -4,6 +4,10 @@ A private, mobile-first cash-flow ledger built with React, TypeScript, Vite, and
 
 For the hosted app at https://cash-flow-tracker-godz-i.vercel.app, follow the [Vercel setup guide](docs/vercel-setup.md) for its exact environment variables, private server credential, Firebase authorized domain and first import. Pushes to the connected main branch deploy through Vercel. No local Windows server needs to stay running for the hosted app.
 
+## Install on your phone
+
+The hosted tracker is installable with its own Cash Flow logo. On Android, open it in Chrome and choose **Install app**. On iPhone or iPad, open it in Safari and choose **Share → Add to Home Screen → Add**. Sign in with the same Google account; an internet connection is needed for Firestore. See [installation and logo details](docs/pwa-setup.md) for browser options, safe updates and assets.
+
 ## Start locally
 
 Requires Node.js 24.x, matching the hosted runtime.
@@ -155,7 +159,7 @@ A transaction’s `scope` is its explicit Personal / Business classification. It
 
 **Check-In History** shows a full calendar for any selected month, including missing days and upcoming days. Historical dates can be reviewed and explicitly completed. The history records completion time, transaction count, and the exact transaction IDs/revisions reviewed. Global daily status uses the `All` check-in; legacy per-classification confirmations remain stored. A changed transaction requires another confirmation. Consecutive days can continue through yesterday while today is pending. Completed days include today if confirmed; missed counts exclude today and future days. Calendar dates without confirmations remain visible, including dates before the first recorded entry.
 
-**Tracker settings** sets a local reminder time (default 18:00) and a small-purchase threshold (default $10). An incomplete day shows “Today’s cash flow has not been reviewed.” inside the open app after that time. The state rechecks while the app is open and on focus. It does not send desktop or mobile notifications. Real push delivery would require an HTTPS deployment, a service worker, explicit user notification permission, saved push subscriptions, and a server scheduler with a configured timezone to check completion and send Web Push. None of those capabilities are claimed or simulated here.
+**Tracker settings** sets a local reminder time (default 18:00) and a small-purchase threshold (default $10). An incomplete day shows “Today’s cash flow has not been reviewed.” inside the open app after that time. The state rechecks while the app is open and on focus. It does not send desktop or mobile notifications. Real push delivery would additionally require explicit notification permission, saved push subscriptions, and a server scheduler with a configured timezone to check completion and send Web Push. Installing the app does not add push delivery or background reminder scheduling.
 
 **Month-End Review** separates Personal / Business income and expenses, net cash flow, Need / Want, planned versus unplanned recorded spending, small purchases, transfers, largest categories, frequent merchants, active leak flags, and reported savings from actions completed in that month. Planned spending matches the budget category and subcategory within the same classification. Savings are a reported monthly change and annualized estimate, not realized cash receipts. Review notes target the following month and appear there; edits preserve an audit trail.
 

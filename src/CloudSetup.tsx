@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { Cloud, Download, Upload, LogOut, ArrowLeft } from 'lucide-react';
+import { BrandMark } from './Brand';
+import { Download, Upload, LogOut, ArrowLeft } from 'lucide-react';
 import type { State } from '../shared/model';
 import { stateTables, validateBackup } from '../shared/backup';
 import { initialState } from '../shared/seed';
@@ -44,7 +45,7 @@ export default function CloudSetup({ onImported, onSignOut }: { onImported: () =
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   return <div className="login-screen"><section className="panel cloud-setup" aria-busy={busy}>
-    <span className="brand-mark"><Cloud size={25} /></span>
+    <BrandMark />
     <span className="cloud-step">{candidate ? 'Step 2 of 2 · Review & open' : 'Step 1 of 2 · Choose records'}</span>
     <h1>{candidate ? 'Review your backup' : 'Set up cloud storage'}</h1>
     <p>{candidate ? 'Confirm these records, then import them and open your tracker. Your original backup and device records stay intact.' : 'Google sign-in is complete. Import your saved records once to open the cloud tracker.'}</p>
