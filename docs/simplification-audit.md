@@ -102,3 +102,18 @@ The production status endpoint returned HTTP 200 with configured=true, backend=f
 The production build and type checks passed. The complete 104-case browser run passed 100 cases; four tests needed their old sample-balance assumptions updated. The final targeted seven-case run passed the corrected empty-balance editor and bank-check cases. All 104 unique cases are covered on the final application sources, with no remaining failures. Dark contrast, 320–1920 pixel layouts, 200% text, receipt entry, transfers, duplicate saves/Undo, preview accuracy, mocked online loading, backups, PWA privacy, reduced motion and still Add are covered. The previous 68 financial/security unit checks remain the baseline; shared calculation and persistence code did not change.
 
 In the simulated 390-pixel phone check with 4x CPU throttling, both baseline and one-shot ripple scrolling had a 17.0 ms 95th-percentile interval. About 0.14% of frames exceeded 50 ms in both runs, within the limits. This is simulation, not a physical-device guarantee. The dark screenshot gallery is `.local/clear-water/gallery.html`.
+
+
+## Editable balances and wider dark-water release — 2026-10-06
+
+The user explicitly requested publication to the existing production Vercel site through GitHub. This authorizes promoting the reviewed simplification branch to main. No private financial records were edited, imported or removed during development or release checks.
+
+- Added a direct, accessible pencil beside each account balance. Edit balance prefills the tracked amount, saves a dated correction through the existing bank-check API, preserves prior entries and history, then closes without selecting another bank. Account names and last four digits remain editable through Edit account.
+- Home’s cash total opens Cash flow with Banks & cards visible. Account rows and groups still collapse. Kept the five everyday tabs and all deeper tools in Advanced.
+- Generated a third compressed, static clear-water photograph. Added imagery to everyday section headings, account-group and Advanced accents, and the sign-in background. Retained one dark appearance and readable text backplates. The generated asset and exact prompt are documented in clear-water-assets.md.
+- Browser QA found and fixed a rapid second tap falling through the closed balance editor. Entry and balance forms now share the same narrow repeated-click guard; single taps remain immediate.
+- Production build/typecheck passed. All 68 financial/server tests passed. The full 109-case browser run passed 105 cases; four new tests initially stopped on an incomplete fixture. After completing the fixture and asserting the existing two-record correction history correctly, the targeted checks exposed the phone tap issue. The final fixed build passed 20 repeated checks (two runs each of the five balance/layout cases, the purchase/edit/Undo flow, bank-check flow, and three save-ripple/Undo cases). All 109 unique cases have passing coverage; the full suite was not rerun after the narrow click-guard fix.
+- Screenshots reviewed for Home, Income, Expenses, Cash flow, Advanced and Add at 320, 390, 768 and 1440 pixels. Layout/contrast checks also cover 1920 pixels, doubled text and increased contrast. Reduced motion disables effects; Add has no decorative animation.
+- Phone-sized 4× CPU-throttled scrolling: baseline p95 17.2 ms, effects p95 17.1 ms. This is browser emulation, not a physical-phone benchmark.
+
+Release target: `https://cash-flow-tracker-godz-i.vercel.app/`. Check the production build, photograph, installation worker and public Firestore configuration after the push. Private authenticated Firestore writes are intentionally not exercised by deployment checks.

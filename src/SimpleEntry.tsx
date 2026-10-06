@@ -5,17 +5,7 @@ import { inputCents, quickEntry } from '../shared/simple';
 import { fundingFor } from '../shared/allocation';
 import { Modal } from './components';
 import { friendlyError } from './words';
-// Closing a saved form must not send the next rapid tap into the list beneath it.
-function guardSaveClickThrough(rect: DOMRect) {
-  const stop = (event: MouseEvent) => {
-    const target = event.target as Element | null;
-    if (event.detail > 1 && target?.closest('main, .sidebar, .mobile-nav, .mobile-add') && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
-      event.preventDefault(); event.stopImmediatePropagation();
-    }
-  };
-  document.addEventListener('click', stop, true);
-  window.setTimeout(() => document.removeEventListener('click', stop, true), 350);
-}
+import { guardSaveClickThrough } from './interaction';
 
 export default function SimpleEntry({ state, edit, preset, initialType = 'Expense', initialScope = 'All', onClose, onSave, onRemove }: { state: State; edit?: Transaction; preset?: Partial<Transaction>; initialType?: TransactionType; initialScope?: Scope | 'All'; onClose: () => void; onSave: (t: Transaction) => Promise<void>; onRemove: (t: Transaction) => Promise<void> }) {
   const initial = edit ?? preset, accounts = state.accounts.filter(a => !a.hidden || (edit && (a.id === edit.accountId || a.id === edit.toAccountId)));

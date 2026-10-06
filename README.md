@@ -206,3 +206,6 @@ See the [guided Google Sheets setup](docs/google-sheets-setup.md) to connect the
 
 
 Design preview (`?preview=simple`) is separate from signed-in storage. A notice on every preview page links to the normal live tracker. Preview starts with the supplied expense/account list and no invented purchases, received income or opening balances. Test fixtures stay in test files. Normal signed-in mode loads the saved server records and identifies online storage; on-device mode identifies device storage.
+
+
+To update a bank balance, open **Cash flow → Banks & cards** and tap the pencil beside that bank. Enter the amount shown in your bank app and choose **Save balance**. This updates your tracked balance; it does not move actual money or add a purchase. The Home cash amount also opens Cash flow. All five everyday pages use the same dark appearance with static clear-water photographs.

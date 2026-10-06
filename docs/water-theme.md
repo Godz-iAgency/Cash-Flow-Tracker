@@ -32,3 +32,10 @@ Validation uses desktop Chrome, phone/tablet viewport simulation and enlarged te
 
 
 The preview has a notice on every page and a link to the normal live tracker. It starts without invented transactions, receipts, income received or bank balances. Test-only transaction fixtures are excluded from the application. A new review-only storage key ignores the previous sample state while preserving both the older preview key and real device records. Normal signed-in mode reads the server state and says Saved online only after that read succeeds.
+
+
+## Direct balance editing and wider water imagery
+
+One dark appearance remains the default and only appearance. Cash flow opens Banks & cards so the Home cash total leads directly to accounts. Each account has an accessible 44-pixel pencil button beside its balance. Edit balance prefills the current amount, accepts a typed replacement and saves only that account through the existing bank-check endpoint. It closes after saving rather than moving on to a different bank. Starting balances, original receipts, income, transfers and balance history retain their existing semantics. Checking all banks remains a separate optional action.
+
+A new static river photograph is used in Cash flow and everyday list headings. Existing water photographs also appear above account groups and Advanced reports. Text has dark backplates or lives below the image. Add has only a static small water accent; no decorative motion. No new metrics, categories, purchases or balances are introduced.

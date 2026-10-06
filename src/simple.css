@@ -332,7 +332,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 .more-menu > .tool-group { order: -1; }
 .simple-metric.warning strong { color: var(--danger); }
 
-/* Static, compressed photography. Text has a reliable pale backplate. */
+/* Static, compressed photography. Text has a reliable dark backplate. */
 .water-photo { position: relative; isolation: isolate; background-color: #BFE5DE; background-size: cover; background-position: center; border: 1px solid var(--border); border-radius: 24px; padding: 24px; overflow: hidden; }
 .water-surface { background-image: url('/water/clear-surface.webp'); }
 .water-flow { background-image: url('/water/clear-flow.webp'); }
@@ -412,3 +412,33 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 .preview-notice { border: 1px solid var(--border); border-radius: 12px; background: var(--raised); padding: 12px 16px; }
 .preview-notice strong { color: var(--text); }
 .preview-notice a { display: inline-flex; align-items: center; gap: 8px; color: var(--link); min-height: 44px; }
+
+/* More water, without motion or photos behind dense lists. */
+.water-river { background-image: url('/water/clear-river.webp'); }
+.flow-water-card { background-image: url('/water/clear-river.webp'); }
+.water-section-head { background: var(--surface) url('/water/clear-river.webp') center 55% / cover; border: 1px solid var(--border); border-radius: 16px; padding: 10px; gap: 8px; flex-wrap: wrap; }
+.water-section-head > * { background: var(--water-backplate); border-radius: 10px; padding: 8px 12px; color: var(--text); }
+.water-section-head > .text-button { color: var(--link); }
+.account-group { position: relative; }
+.account-group::before, .app-shell[data-page='Advanced'] .main-content > .simple-disclosure::before { content: ''; display: block; height: 30px; background: url('/water/clear-flow.webp') center / cover; }
+.balance-hint { color: var(--muted); font-size: .875rem; padding: 0 20px 14px; margin: 0; }
+.account-item { position: relative; border-bottom: 1px solid var(--border); }
+.account-item:last-child { border-bottom: 0; }
+.account-item .account-row { border: 0; }
+.account-item .account-row > summary { padding-right: 54px; flex-wrap: wrap; }
+.account-item .disclosure-title { flex-basis: 40%; }
+.balance-edit { position: absolute; right: 0; top: 18px; min-width: 44px; min-height: 44px; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); color: var(--link); z-index: 1; display: grid; place-items: center; }
+.balance-edit:active { background: var(--hover); }
+.bank-strip { background: linear-gradient(var(--water-backplate),var(--water-backplate)), url('/water/clear-river.webp') center / cover; }
+.modal-heading { position: relative; isolation: isolate; padding-top: 8px; }
+.modal-heading::before { content: ''; position: absolute; right: -4px; top: -6px; width: 76px; height: 6px; border-radius: 8px; background: url('/water/clear-river.webp') center / cover; z-index: -1; }
+.login-screen { background: linear-gradient(rgba(7,20,22,.78),rgba(7,20,22,.94)), url('/water/clear-river.webp') center / cover; }
+@media (max-width:760px) {
+  .water-section-head { padding: 8px; }
+  .water-section-head > * { padding: 6px 8px; }
+  .balance-hint { padding-left: 16px; padding-right: 16px; }
+  .account-item .disclosure-title { flex-basis: calc(100% - 28px); }
+  .account-item .disclosure-amount { margin-right: auto; text-align: left; }
+}
+@media (prefers-contrast:more), (prefers-reduced-transparency:reduce) { .water-section-head > * { background: var(--water-solid); } }
+@media print { .water-section-head, .bank-strip, .login-screen { background-image: none; } .account-group::before, .app-shell[data-page='Advanced'] .main-content > .simple-disclosure::before, .modal-heading::before { display: none; } }
