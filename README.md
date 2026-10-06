@@ -30,19 +30,17 @@ Open http://localhost:3001. No financial credentials are bundled in the frontend
 
 ## Screens and responsive behavior
 
-- **Home:** total cash, recorded monthly income and spending, net cash flow, today's review, a compact budget and the five most recent entries.
-- **Transactions:** daily ledger, search, date and type filters, and edits with preserved previous versions.
-- **Budget:** every supplied expense item, planned versus actual, remaining amount, and monthly plan adjustments that leave other months intact.
-- **Accounts:** all five supplied accounts, dated balance snapshots with later recorded movements, monthly inflows and outflows, and Personal / Business / All filters.
-- **Insights:** daily, weekly, and monthly spending; needs versus wants; average discretionary spending; purchases under a configurable threshold (default $10); repeated merchants and categories; unplanned, miscellaneous, and snack spending.
+- **Home:** known cash, smaller card debt, quick Spent / Got paid / Move money actions, this month's budget, today's editable entries and Check my bank.
+- **Activity:** newest entries grouped by day, search and type filters; tap an entry to edit or remove it with preserved history.
+- **Budget:** expected income, budget total and left after budget, followed by a compact category list. Expand an item to see its spending, edit it or record a bill payment. Changes apply forward or to one month.
+- **Accounts:** cash and card debt, collapsible account groups, account movements and a guided bank check. Hidden accounts keep their earlier entries.
+- **Advanced:** spending insights, charts, money flow, history, notes/reminders, month-end review, settings, storage/backup, appearance and installation.
 
-Phones use bottom navigation and a persistent Add transaction button. Tablets use a compact sidebar, while laptops and desktops use wider card layouts. Forms become bottom sheets on phones. Layouts include safe-area spacing, keyboard focus management, reduced-motion support, and print styles. Money is always displayed to two decimal places.
-
-The five main pages are Home, Transactions, Budget, Accounts and Insights. **Advanced** holds Notes & Reminders, Money Flow, Check-In History, Month-End Review, Settings, Storage & backup, Refresh data, appearance and installation/update controls. Payment-account plans and balance calculations expand on request. Charts and spending flags appear in Insights. See [the interface simplification audit](docs/simplification-audit.md).
+The same Personal / Business / All choice persists across the five tabs. Phones have bottom navigation and a persistent Add entry button. Tablets and desktops have a sidebar. Forms become bottom sheets on phones, with amount focused and optional details under More options. Layouts respect safe areas, keyboard focus, larger text, reduced motion and reduced transparency. Money displays two decimal places. See [the simplification and verification audit](docs/simplification-audit.md).
 
 ## Water appearance
 
-The calm navy and aqua theme defaults to dark. Choose **Advanced → Appearance → Light** for the optional light version. All colors are centralized in `src/water-tokens.css`. The original logo, layout and financial workflows remain intact. See [the water appearance guide](docs/water-theme.md) for motion, save Undo, contrast verification and the isolated sample preview.
+The calm navy and aqua theme defaults to dark. Choose **Advanced → Appearance → Light** for the optional light version. All colors are centralized in `src/water-tokens.css`. The original logo and financial accounting rules remain intact; the daily screens use compact, interactive lists. See [the water appearance guide](docs/water-theme.md) for motion, save Undo, contrast verification and the isolated sample preview.
 
 ## Source data and assumptions
 
@@ -56,7 +54,7 @@ The repository and local workspace were empty. The provided attachment was the *
 
 These totals are derived from records, not hard-coded UI totals. Initial recorded income and expenses are zero: planned income is not a paycheck received. All five account balances are initially **unset**, because no balances were supplied. Business budgets and business planned income are not invented.
 
-The written plan becomes a recurring monthly template. A budget edit creates an override only for the selected month. All amounts use USD. The browser's local date/time determines entry defaults and calendar periods; weeks run Monday through today. Account balances start from manually entered bank snapshots and apply recorded movements after their financial timestamp. Unknown balances remain unknown. Credit-card balances represent amounts owed. Transfers affect account movement but never increase income, expenses, needs, or wants.
+The written plan becomes a recurring monthly template. A budget edit creates either a selected-month override or an effective version from that month forward, preserving earlier plans. All amounts use USD. The browser's local date/time determines entry defaults and calendar periods; weeks run Monday through today. Account balances start from manually entered bank snapshots and apply recorded movements after their financial timestamp. Unknown balances remain unknown. Credit-card balances represent amounts owed. Transfers affect account movement but never increase income, expenses, needs, or wants.
 
 ## Firestore and Sheets
 
@@ -83,7 +81,7 @@ Follow [the Firestore setup guide](docs/firestore-setup.md). It covers owner-onl
 | `transactions` | Stable IDs, dates, times, type, integer amount in cents, category, subcategory, merchant, description, account IDs, scope, classification, notes, timestamps, revision |
 | `accounts` | Labels, last four digits only, account type, scope, optional balance snapshot and timestamp |
 | `categories` | Stable IDs and category names |
-| `budgets` | Stable plan IDs, category, item, amount in cents, scope, and `*` template or `YYYY-MM` override |
+| `budgets` | Stable plan IDs, category, item, amount in cents, scope, and `*` template, `YYYY-MM` override or `from:YYYY-MM` effective version, plus optional bill details |
 | `income` | Planned income records; actual income is an Income transaction |
 | `audit` | Before/after snapshots of financial changes with IDs and timestamps |
 
@@ -97,7 +95,7 @@ The server serializes writes within **one running server instance**. Google Shee
 
 The production server binds to loopback. Put it behind an HTTPS reverse proxy, set `NODE_ENV=production`, and forward the request to port 3001. The proxy must preserve Host and set `X-Forwarded-Proto`; loopback proxies are trusted. Password sessions use signed, expiring, HttpOnly, SameSite cookies and Secure cookies in production. API writes require JSON and the same origin. Repeated failed sign-ins are limited.
 
-Do not expose the Vite development server publicly. This repository has not been deployed, and no live spreadsheet credentials have been configured.
+Do not expose the Vite development server publicly. For the connected Vercel deployment, use the Vercel setup guide above.
 
 ## Optional Gemini drafts
 
@@ -117,7 +115,7 @@ Browser tests use Chromium by default. Install it once with `npx playwright inst
 
 ## Financial actions and daily awareness
 
-The new features extend the existing app and storage. Transactions, accounts, categories, budgets, and income keep their existing schemas and calculations.
+The new features extend the existing app and storage. Original records remain readable and calculations still use integer cents. Optional plan and account metadata extends the schemas without erasing earlier records.
 
 **Notes & Reminders**, inside More, holds financial observations and next steps: title, note, category, optional related planned/recorded expense and account, Personal/Business scope, priority, status, reminder date, potentially affected amount, cost/savings fields, and timestamps. Search and status/priority filters include completed history. Completion does not delete a record, and edits retain prior versions in the audit trail.
 

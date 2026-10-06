@@ -46,7 +46,7 @@
   --button: #0E9AA7;
   --link: #076E7B;
   --text: #0B2A36;
-  --muted: #496C77;
+  --muted: #3E626E;
   --success: #08786B;
   /* Coral stays the warning paint; darker terracotta keeps warning text readable. */
   --danger: #A53E2D;
@@ -66,5 +66,5 @@
   --glow: color-mix(in srgb, var(--button) 7%, transparent);
 }
 @media print {
-  :root { --canvas: #FFFFFF; --surface: #FFFFFF; --raised: #DCEEF4; --text: #0B2A36; --muted: #496C77; --link: #076E7B; --success: #08786B; --danger: #A53E2D; --surface-glint: var(--surface); --hero-glow: var(--surface); }
+  :root { --canvas: #FFFFFF; --surface: #FFFFFF; --raised: #DCEEF4; --text: #0B2A36; --muted: #3E626E; --link: #076E7B; --success: #08786B; --danger: #A53E2D; --surface-glint: var(--surface); --hero-glow: var(--surface); }
 }

@@ -49,7 +49,7 @@ test('Sheets extension adds only new tabs and preserves existing schemas, record
           replies.push({ addSheet: { properties: { title, sheetId: id } } });
         } else if (request.updateCells) {
           const start = request.updateCells.start, sheet = [...sheets.values()].find(s => s.id === start.sheetId)!;
-          assert.equal(start.rowIndex, 0); assert.ok((start.sheetId === 1 && start.columnIndex === 7) || (start.sheetId === 7 && start.columnIndex === 6) || (start.sheetId === 5 && start.columnIndex === 17));
+          assert.equal(start.rowIndex, 0); assert.ok((start.sheetId === 1 && start.columnIndex === 7) || (start.sheetId === 7 && start.columnIndex === 6) || (start.sheetId === 5 && start.columnIndex === 17) || (start.sheetId === 3 && start.columnIndex === 6) || (start.sheetId === 4 && start.columnIndex === 5));
           sheet.rows[0].push(...request.updateCells.rows[0].values.map((cell: any) => cell.userEnteredValue.stringValue)); replies.push({});
         } else if (request.appendCells) {
           const sheet = [...sheets.values()].find(sheet => sheet.id === request.appendCells.sheetId)!;

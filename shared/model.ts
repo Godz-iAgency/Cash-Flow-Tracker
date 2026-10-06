@@ -5,15 +5,18 @@ export type Scope = 'Personal' | 'Business';
 export type TransactionType = 'Expense' | 'Income' | 'Transfer';
 export type Classification = 'Need' | 'Want' | '';
 export interface Account {
+  hidden?: boolean; revision?: number;
   id: string; name: string; lastFour: string; scope: Scope;
   type: 'Checking' | 'Savings' | 'Credit card'; balanceCents: number | null;
   balanceUpdatedAt: string | null; balanceIncludedTransactionIds?: string | null; balanceAsOf?: string | null;
 }
 export interface Category { id: string; name: string; }
 export interface Budget {
+  dueDay?: number | null; paymentAccountId?: string; classification?: 'Need' | 'Want'; hidden?: boolean; revision?: number; aliases?: string;
   id: string; label: string; category: string; amountCents: number; scope: Scope; month: string;
 }
 export interface PlannedIncome {
+  revision?: number;
   id: string; label: string; amountCents: number; scope: Scope; month: string;
 }
 export interface Transaction {
@@ -42,12 +45,21 @@ export function localDate(date = new Date()): string {
 }
 export const currentMonth = () => localDate().slice(0, 7);
 export function monthBudgets(state: State, month: string, scope: Scope | 'All'): Budget[] {
-  const applicable = state.budgets.filter(b => scope === 'All' || b.scope === scope);
-  return applicable.filter(b => b.month === month || (b.month === '*' && !applicable.some(o => o.month === month && o.id === b.id)));
+  return resolvePlans(state.budgets, month, scope).filter(b => !b.hidden);
 }
 export function monthIncome(state: State, month: string, scope: Scope | 'All'): PlannedIncome[] {
-  const applicable = state.income.filter(i => scope === 'All' || i.scope === scope);
-  return applicable.filter(i => i.month === month || (i.month === '*' && !applicable.some(o => o.month === month && o.id === i.id)));
+  return resolvePlans(state.income, month, scope);
+}
+export function resolvePlans<T extends { id: string; month: string; scope: Scope; revision?: number }>(plans: T[], month: string, scope: Scope | 'All'): T[] {
+  const selected = new Map<string, T>();
+  const priority = (p: T) => p.month === month ? '2' : p.month.startsWith('from:') ? `1${p.month}` : '0';
+  for (const p of plans) {
+    if (scope !== 'All' && p.scope !== scope) continue;
+    if (p.month !== '*' && p.month !== month && !(p.month.startsWith('from:') && p.month.slice(5) <= month)) continue;
+    const previous = selected.get(p.id);
+    if (!previous || (p.revision ?? 0) > (previous.revision ?? 0) || ((p.revision ?? 0) === (previous.revision ?? 0) && priority(p) > priority(previous))) selected.set(p.id, p);
+  }
+  return [...selected.values()];
 }
 export function scopedTransactions(state: State, month: string, scope: Scope | 'All'): Transaction[] {
   return state.transactions.filter(t => t.date.startsWith(month) && (scope === 'All' || (t.type === 'Transfer' ? state.accounts.some(a => (a.id === t.accountId || a.id === t.toAccountId) && a.scope === scope) : t.scope === scope)))
@@ -61,7 +73,9 @@ export function summarize(transactions: Transaction[]) {
   return { income, expenses, net: income - expenses, needs, wants };
 }
 export function budgetSpent(budget: Budget, transactions: Transaction[]) {
-  return transactions.filter(t => t.type === 'Expense' && t.scope === budget.scope && t.category === budget.category && t.subcategory === budget.label).reduce((n, t) => n + t.amountCents, 0);
+  let names: string[][] = [];
+  try { const parsed = JSON.parse(budget.aliases || '[]'); names = Array.isArray(parsed) ? parsed.filter(pair => Array.isArray(pair) && pair.length === 2 && pair.every(value => typeof value === 'string')) : []; } catch { /* Old plans have no aliases. */ }
+  return transactions.filter(t => t.type === 'Expense' && t.scope === budget.scope && ((t.category === budget.category && t.subcategory === budget.label) || names.some(([category, label]) => category === t.category && label === t.subcategory))).reduce((n, t) => n + t.amountCents, 0);
 }
 export function accountFlows(accountId: string, transactions: Transaction[]) {
   let inflows = 0, outflows = 0;

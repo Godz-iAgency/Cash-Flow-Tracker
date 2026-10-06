@@ -1,4 +1,4 @@
-import { accountFlows, localDate, monthBudgets, scopedTransactions, summarize, type Account, type Scope, type State, type Transaction } from './model.js';
+import { budgetSpent, accountFlows, localDate, monthBudgets, scopedTransactions, summarize, type Account, type Scope, type State, type Transaction } from './model.js';
 import { transactionFingerprint, validDate } from './actions.js';
 export interface ExpenseFunding { id: string; budgetId: string; month: string; paymentAccountId: string; amountCents: number; dueDay: number | null; autopay: boolean; revision: number; updatedAt: string; }
 export interface TrackerSettings { id: 'app'; reminderTime: string; smallPurchaseThresholdCents: number; revision: number; updatedAt: string; }
@@ -8,9 +8,17 @@ export const settingsFor = (state: State): TrackerSettings => state.settings.fin
 export const accountRoles: Record<string, string> = { 'capital-one-checking': 'Personal Operating Account', 'capital-one-savings': 'Personal Savings / Reserve', 'capital-one-savor': 'Personal Credit Card', 'chase-savings': 'Business Operating / Savings Account', 'chase-unlimited': 'Business Credit Card' };
 export function shiftDate(date: string, days: number) { const d = new Date(`${date}T12:00:00`); d.setDate(d.getDate() + days); return localDate(d); }
 export function nextMonth(month: string) { const d = new Date(`${month}-15T12:00:00`); d.setMonth(d.getMonth() + 1); return localDate(d).slice(0, 7); }
-export function fundingFor(state: State, budgetId: string, month: string) { return state.expenseFunding.find(f => f.budgetId === budgetId && f.month === month) ?? state.expenseFunding.find(f => f.budgetId === budgetId && f.month === '*'); }
+export function fundingFor(state: State, budgetId: string, month: string) {
+  const records = state.expenseFunding.filter(f => f.budgetId === budgetId);
+  return records.find(f => f.month === month) ?? records.filter(f => f.month.startsWith('from:') && f.month.slice(5) <= month).sort((a, b) => b.month.localeCompare(a.month))[0] ?? records.find(f => f.month === '*');
+}
 export function fundedExpenses(state: State, month: string, scope: Scope | 'All' = 'All') {
-  return monthBudgets(state, month, scope).map(b => { const f = fundingFor(state, b.id, month); const day = f?.dueDay == null ? null : Math.min(f.dueDay, new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate()); return { budget: b, funding: f, amountCents: f?.amountCents ?? b.amountCents, date: day === null ? '' : `${month}-${String(day).padStart(2, '0')}` }; });
+  return monthBudgets(state, month, scope).map(b => {
+    const legacy = fundingFor(state, b.id, month), hasDetails = b.dueDay !== undefined || b.paymentAccountId !== undefined;
+    const f = hasDetails ? { id: legacy?.id ?? `funding-${b.id}-default`, budgetId: b.id, month: legacy?.month ?? '*', revision: legacy?.revision ?? 0, updatedAt: legacy?.updatedAt ?? '', autopay: legacy?.autopay ?? false, amountCents: b.amountCents, dueDay: b.dueDay !== undefined ? b.dueDay : legacy?.dueDay ?? null, paymentAccountId: b.paymentAccountId ?? legacy?.paymentAccountId ?? '' } : legacy;
+    const day = f?.dueDay == null ? null : Math.min(f.dueDay, new Date(Number(month.slice(0, 4)), Number(month.slice(5)), 0).getDate());
+    return { budget: b, funding: f, amountCents: f?.amountCents ?? b.amountCents, date: day === null ? '' : `${month}-${String(day).padStart(2, '0')}` };
+  });
 }
 export function localMinute(date = new Date()) { return `${localDate(date)}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`; }
 export function balanceSnapshotIds(transactions: Transaction[], asOf: string) {
@@ -54,7 +62,7 @@ export function checkInHistory(state: State, month: string, today = localDate())
 export function dailyMovement(state: State, date: string) { const transactions = state.transactions.filter(t => t.date === date); return { ...summarize(transactions), transfers: transactions.filter(t => t.type === 'Transfer').reduce((n, t) => n + t.amountCents, 0), count: transactions.length }; }
 export function monthlyReview(state: State, month: string, scope: Scope | 'All') {
   const rows = scopedTransactions(state, month, scope), expenses = rows.filter(t => t.type === 'Expense'), plans = monthBudgets(state, month, scope);
-  const planned = expenses.filter(t => plans.some(b => b.scope === t.scope && b.category === t.category && b.label === t.subcategory));
+  const planned = expenses.filter(t => plans.some(b => budgetSpent(b, [t]) > 0));
   const small = expenses.filter(t => t.amountCents < settingsFor(state).smallPurchaseThresholdCents);
   const group = (items: Transaction[], key: 'merchant' | 'category' | 'accountId') => Object.values(items.reduce<Record<string, { name: string; amountCents: number; count: number }>>((acc, t) => { const name = t[key].trim(), id = name.toLowerCase().replace(/\s+/g, ' '); const v = acc[id] ?? { name: name || 'Unspecified', amountCents: 0, count: 0 }; acc[id] = { ...v, amountCents: v.amountCents + t.amountCents, count: v.count + 1 }; return acc; }, {}));
   const income = rows.filter(t => t.type === 'Income');
@@ -67,8 +75,8 @@ function text(v: Record<string, unknown>, key: string, max = 200) { if (typeof v
 function revision(v: Record<string, unknown>, previous?: { revision: number }) { if (v.revision !== (previous?.revision ?? 0)) throw new Error('This record changed. Refresh before saving.'); return (previous?.revision ?? 0) + 1; }
 function cents(value: unknown, positive = false) { if (!Number.isSafeInteger(value) || (value as number) < (positive ? 1 : 0) || (value as number) > 99999999999) throw new Error('Enter a valid amount in cents.'); return value as number; }
 export function validateFunding(input: unknown, state: State): ExpenseFunding {
-  const v = object(input), budgetId = text(v, 'budgetId', 100), month = text(v, 'month', 7);
-  if (!state.budgets.some(b => b.id === budgetId) || (month !== '*' && !monthOK(month))) throw new Error('Choose a valid planned expense and month.');
+  const v = object(input), budgetId = text(v, 'budgetId', 100), month = text(v, 'month', 12);
+  if (!state.budgets.some(b => b.id === budgetId) || (month !== '*' && !monthOK(month.startsWith('from:') ? month.slice(5) : month))) throw new Error('Choose a valid planned expense and month.');
   const id = `funding-${budgetId}-${month === '*' ? 'default' : month}`, before = state.expenseFunding.find(f => f.id === id), paymentAccountId = text(v, 'paymentAccountId', 100);
   if (paymentAccountId && !state.accounts.some(a => a.id === paymentAccountId)) throw new Error('Choose a payment account.');
   if (v.dueDay !== null && (!Number.isInteger(v.dueDay) || Number(v.dueDay) < 1 || Number(v.dueDay) > 31)) throw new Error('Choose a due day between 1 and 31.');

@@ -1,10 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowUpRight, ArrowRight, ArrowLeftRight, BarChart3, CalendarDays, ClipboardList, ChevronLeft, ChevronRight, MoreHorizontal, CreditCard, Download, LayoutDashboard, LoaderCircle, LogOut, Plus, RefreshCw, ShieldCheck, Wallet, Check } from 'lucide-react';
-import { currentMonth, localDate, money, monthBudgets, parseCents, validateTransaction, type Account, type Budget, type Scope, type State, type Transaction, type TransactionType } from '../shared/model';
+import { ArrowUpRight, ArrowRight, ArrowLeftRight, BarChart3, CalendarDays, ClipboardList, ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal, CreditCard, Download, LayoutDashboard, LoaderCircle, LogOut, Plus, RefreshCw, ShieldCheck, Wallet, Check } from 'lucide-react';
+import { currentMonth, localDate, money, budgetSpent, scopedTransactions, monthBudgets, parseCents, validateTransaction, type Account, type Budget, type Scope, type State, type Transaction, type TransactionType } from '../shared/model';
 import { initialState } from '../shared/seed';
 import { Modal, Empty, monthLabel } from './components';
 import { AccountsView, BalanceHero, BudgetView, Dashboard, Insights, Ledger, type Page } from './pages';
 import TransactionForm from './TransactionForm';
+import SimpleEntry from './SimpleEntry';
+import { HomeView, ActivityView, BudgetList, AccountsList, EntriesDialog, SpendingButtons } from './SimpleViews';
+import { BudgetEditor, IncomeEditor, AccountEditor, BankCheck } from './SimpleEditors';
+import { bankCheck, removeEntry, validateBudgetChange, validateIncomeChange, validateAccountChange } from '../shared/simple';
+import { fundingFor } from '../shared/allocation';
 import { api } from './api';
 import CloudSetup from './CloudSetup';
 import { BrandMark } from './Brand';
@@ -20,16 +25,17 @@ import { ActionForm, NotesReminders } from './financialActions';
 import { balanceSnapshotIds, localMinute, currentBalance, validateFunding, validateIncomeSource, validateMonthReview, validateSettings, type ExpenseFunding, type IncomeSource, type MonthReview, type TrackerSettings } from '../shared/allocation';
 import { FundingForm, FundingSection, IncomeSourceForm, MoneyFlow, MonthEndReview, SettingsForm } from './AllocationViews';
 import { DailyCheckIn as DailyCheckInCard, CheckInHistory } from './DailyReview';
-import { ReconciliationForm } from './Reconciliation';
+import { ReconciliationForm, ReconciliationPanel } from './Reconciliation';
 import { validateReconciliation } from '../shared/reconciliation';
 import { FinancialLeakPanel } from './awareness';
 type Mode = 'loading' | 'local' | 'cloud' | 'login' | 'setup' | 'error';
-const visualPreview = new URLSearchParams(window.location.search).get('preview') === 'water';
+const visualPreview = new URLSearchParams(window.location.search).get('preview') === 'water' || new URLSearchParams(window.location.search).get('preview') === 'simple';
 const storageKey = visualPreview ? 'cash-flow-water-preview' : 'cash-flow-tracker-v1';
-const navigation = [{ name: 'Dashboard' as Page, icon: LayoutDashboard }, { name: 'Transactions' as Page, icon: ArrowLeftRight }, { name: 'Budget' as Page, icon: Wallet }, { name: 'Accounts' as Page, icon: CreditCard }, { name: 'Insights' as Page, icon: BarChart3 }];
+const navigation = [{ name: 'Dashboard' as Page, icon: LayoutDashboard }, { name: 'Transactions' as Page, icon: ArrowLeftRight }, { name: 'Budget' as Page, icon: Wallet }, { name: 'Accounts' as Page, icon: CreditCard }, { name: 'Advanced' as Page, icon: MoreHorizontal }];
 const pageTitles: Record<Page, string> = {
-  Dashboard: 'Dashboard',
-  Transactions: 'Transactions',
+  Dashboard: 'Home',
+  Advanced: 'Advanced',
+  Transactions: 'Activity',
   Budget: 'Budget',
   Accounts: 'Accounts',
   Insights: 'Insights',
@@ -61,10 +67,17 @@ export default function App() {
   const [state, setState] = useState<State>(initialState), [mode, setMode] = useState<Mode>('loading'), [aiEnabled, setAiEnabled] = useState(false);
   const [firebaseConfig, setFirebaseConfig] = useState<FirebaseOptions>();
   const [sheetsExportEnabled, setSheetsExportEnabled] = useState(false), [exporting, setExporting] = useState(false), [exportError, setExportError] = useState('');
-  const [page, setPage] = useState<Page>('Dashboard'), [month, setMonth] = useState(currentMonth), [scope, setScope] = useState<Scope | 'All'>('Personal');
+  const [page, setPage] = useState<Page>('Dashboard'), [month, setMonth] = useState(currentMonth), [scope, setScope] = useState<Scope | 'All'>(() => { const saved = localStorage.getItem('cash-flow-scope'); return saved === 'Business' || saved === 'All' ? saved : 'Personal'; });
   const [transactionOpen, setTransactionOpen] = useState(false), [edit, setEdit] = useState<Transaction>(), [accountEdit, setAccountEdit] = useState<Account>(), [budgetEdit, setBudgetEdit] = useState<Budget>();
   const [fundingEdit, setFundingEdit] = useState<Budget>(), [settingsOpen, setSettingsOpen] = useState(false), [sourceOpen, setSourceOpen] = useState(false), [sourceEdit, setSourceEdit] = useState<IncomeSource>();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [entryPreset, setEntryPreset] = useState<Partial<Transaction>>();
+  const [planOpen, setPlanOpen] = useState(false), [incomeOpen, setIncomeOpen] = useState(false), [accountOpen, setAccountOpen] = useState(false), [accountDetails, setAccountDetails] = useState<Account>();
+  const [bankOpen, setBankOpen] = useState(false), [bankAccount, setBankAccount] = useState<Account>(), [advancedEntry, setAdvancedEntry] = useState(false);
+  const [entryList, setEntryList] = useState<{title: string; ids: string[]}>();
+  function showEntries(title: string, entries: Transaction[]) { setEntryList({title, ids: entries.map(t => t.id)}); }
+  function openBank(account?: Account) { setBankAccount(account); setBankOpen(true); }
+  useEffect(() => { localStorage.setItem('cash-flow-scope', scope); }, [scope]);
   const [undo, setUndo] = useState<{ id: string; revision: number }>();
   const [undoBusy, setUndoBusy] = useState(false);
   const [draftType, setDraftType] = useState<TransactionType>('Expense');
@@ -135,8 +148,30 @@ export default function App() {
     const result = mode === 'cloud' ? await api<Transaction>('transactions', input) : validateTransaction(input, base, previous);
     const next = { ...base, transactions: [...base.transactions.filter(t => t.id !== result.id), result], audit: [...base.audit, audit('transaction', result.id, previous ?? null, result)] };
     await applySaved(next);
+    setEntryList(undefined);
     setUndo({ id: result.id, revision: result.revision });
     setMessage('Saved');
+  }
+  async function saveSimple(table: 'budgets' | 'income' | 'accounts', route: string, input: unknown, validate: (v: unknown, s: State) => Budget | State['income'][number] | Account) {
+    const base = mode === 'local' ? localSnapshot() : state;
+    const after = mode === 'cloud' ? await api<Budget | State['income'][number] | Account>(route, input) : validate(input, base);
+    const records = base[table].filter(r => !(r.id === after.id && (table === 'accounts' || ('month' in r && 'month' in after && r.month === after.month))));
+    await applySaved({ ...base, [table]: [...records, after], audit: [...base.audit, audit(route, after.id, base[table].filter(r => r.id === after.id), after)] }); setMessage('Saved.');
+  }
+  async function saveBank(input: unknown) {
+    const base = mode === 'local' ? localSnapshot() : state;
+    const result = mode === 'cloud' ? await api<ReturnType<typeof bankCheck>>('bank-check', input) : bankCheck(input, base);
+    await applySaved({ ...base, accounts: base.accounts.map(a => result.accounts.find(b => b.id === a.id) ?? a), balanceReconciliations: [...base.balanceReconciliations, ...result.balanceReconciliations], dailyCheckIns: [...base.dailyCheckIns.filter(c => !result.dailyCheckIns.some(b => b.id === c.id)), ...result.dailyCheckIns], audit: [...base.audit, audit('bank check', result.balanceReconciliations[0].accountId, base.accounts.find(a => a.id === result.balanceReconciliations[0].accountId), result)] });
+  }
+  async function deleteEntry(entry: Transaction) {
+    const base = mode === 'local' ? localSnapshot() : state;
+    const result = mode === 'cloud' ? await api<Transaction>(`transactions/${entry.id}/remove`, {revision: entry.revision}) : removeEntry(base, entry.id, entry.revision);
+    await applySaved({ ...base, transactions: base.transactions.filter(t => t.id !== entry.id), audit: [...base.audit, audit('entry removed', entry.id, entry, result)] }); setEntryList(undefined); setMessage('Entry removed.'); setUndo(undefined);
+  }
+  function payBudget(budget: Budget) {
+    const legacyFunding = fundingFor(state, budget.id, month), dueDay = budget.dueDay !== undefined ? budget.dueDay : legacyFunding?.dueDay;
+    const remaining = budget.amountCents - budgetSpent(budget, scopedTransactions(state, month, budget.scope));
+    setEdit(undefined); setDraftType('Expense'); setEntryPreset({ type: 'Expense', amountCents: dueDay ? Math.max(0, remaining) : undefined, subcategory: budget.label, category: budget.category, scope: budget.scope, classification: budget.classification ?? 'Need', accountId: (budget.paymentAccountId ?? legacyFunding?.paymentAccountId) || undefined }); setTransactionOpen(true);
   }
   async function undoSave() {
     if (!undo || undoBusy) return;
@@ -202,47 +237,59 @@ export default function App() {
   const saveSettings = (v: TrackerSettings) => saveExtension('settings', 'settings', v, validateSettings);
   const saveSource = (v: IncomeSource) => saveExtension('incomeSources', 'income-sources', v, validateIncomeSource);
   const saveMonthReview = (v: MonthReview) => saveExtension('monthReviews', 'month-reviews', v, validateMonthReview);
-  function reviewDay(date: string) { setScope('All'); setMonth(date.slice(0, 7)); setLedgerDate(date); setPage('Transactions'); window.scrollTo({ top: 0 }); }
+  function reviewDay(date: string) { setMonth(date.slice(0, 7)); setLedgerDate(date); setPage('Transactions'); window.scrollTo({ top: 0 }); }
   function addAction(preset?: Partial<FinancialAction>) { setActionEdit(undefined); setActionPreset(preset); setActionOpen(true); }
   function editAction(action: FinancialAction) { setActionEdit(action); setActionPreset(undefined); setActionOpen(true); }
   function download() {
     const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), ...state }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `cash-flow-backup-${localDate()}.json`; a.click(); URL.revokeObjectURL(url); setMessage('Backup downloaded.');
   }
-  function startTransaction(type: TransactionType) { setEdit(undefined); setDraftType(type); setTransactionOpen(true); }
+  function startTransaction(type: TransactionType) { setEntryPreset(undefined); setEdit(undefined); setDraftType(type); setTransactionOpen(true); }
   const add = () => startTransaction('Expense'), onEdit = (t: Transaction) => { setEdit(t); setTransactionOpen(true); };
   function navigate(next: Page) { setPage(next); setLedgerDate(''); window.scrollTo({ top: 0 }); }
   async function logout() { if (firebaseConfig) await (await import('./firebaseClient')).signOutGoogle(); await api('logout', {}); setHelp(false); setMode('login'); }
   if (mode === 'setup') return <CloudSetup onImported={load} onSignOut={logout} />;
   if (mode === 'login') return <Login google={Boolean(firebaseConfig)} onSuccess={() => void load()} />;
   if (mode === 'loading' || mode === 'error') return <div className="login-screen"><div className="panel login-card"><BrandMark /><h1>{mode === 'loading' ? 'Loading tracker…' : 'Connection unavailable'}</h1>{mode === 'loading' ? <LoaderCircle className="spin" /> : <><p role="alert">{error}</p><button className="button primary" onClick={() => void load()}>Try again<RefreshCw size={17} /></button></>}</div></div>;
+  const mainPage = navigation.some(n => n.name === page) ? page : 'Advanced';
   return <div className="app-shell" data-page={page}>
     <SaveRipple />
     <a className="skip-link" href="#main">Skip to content</a>
     <aside className="sidebar">
       <a href="#" className="brand" onClick={e => { e.preventDefault(); navigate('Dashboard'); }}><BrandMark /><span>Cash Flow<span className="brand-sub">TRACKER</span></span></a>
-      <nav aria-label="Main navigation">{navigation.map(({ name, icon: Icon }) => <button key={name} aria-label={name} className={`nav-link ${page === name ? 'active' : ''}`} aria-current={page === name ? 'page' : undefined} onClick={() => navigate(name)}><Icon size={20} /><span>{name === 'Dashboard' ? 'Home' : name}</span></button>)}</nav>
-      <div className="sidebar-bottom"><button className="nav-link" aria-label="Advanced" onClick={() => setMoreOpen(true)}><MoreHorizontal size={20} /><span>Advanced</span></button></div>
+      <nav aria-label="Main navigation">{navigation.map(({ name, icon: Icon }) => <button key={name} aria-label={name === 'Dashboard' ? 'Home' : name === 'Transactions' ? 'Activity' : name} className={`nav-link ${mainPage === name ? 'active' : ''}`} aria-current={mainPage === name ? 'page' : undefined} onClick={() => navigate(name)}><Icon size={20} /><span>{name === 'Dashboard' ? 'Home' : name === 'Transactions' ? 'Activity' : name}</span></button>)}</nav>
+      <div className="sidebar-bottom legacy-advanced"><button className="nav-link" aria-label="Advanced" onClick={() => setMoreOpen(true)}><MoreHorizontal size={20} /><span>Advanced</span></button></div>
     </aside>
     <div className="main-shell">
     <header className="topbar"><a href="#" className="mobile-brand" onClick={e => { e.preventDefault(); navigate('Dashboard'); }}><BrandMark /><span>Cash Flow</span></a><button className="icon-button" aria-label="Advanced" onClick={() => setMoreOpen(true)}><MoreHorizontal size={24} /></button></header>
-    <main id="main" className="main-content"><div className="page-heading"><div><h1>{pageTitles[page]}</h1></div>{page !== 'Notes & Reminders' && <button className="button primary heading-add" onClick={add}><Plus size={18} /><span>Add transaction</span></button>}</div>{page === 'Dashboard' && <BalanceHero state={state} onAccounts={() => { navigate('Accounts'); setScope('All'); }} />}<div className="view-toolbar">{page !== 'Notes & Reminders' && <div className="month-picker"><button className="icon-button" aria-label="Previous month" onClick={() => setMonth(stepMonth(month, -1))}><ChevronLeft size={18} /></button><label><CalendarDays size={17} /><span>{monthLabel(month)}</span><input aria-label="Select month" type="month" value={month} onChange={e => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(e.target.value)) setMonth(e.target.value); }} /></label><button className="icon-button" aria-label="Next month" onClick={() => setMonth(stepMonth(month, 1))}><ChevronRight size={18} /></button></div>}<div className="segmented scope-picker" aria-label="Account scope" style={page === 'Check-In History' ? { display: 'none' } : undefined}>{(['Personal', 'Business', 'All'] as const).map(s => <button key={s} aria-pressed={scope === s} className={scope === s ? 'active' : ''} onClick={() => setScope(s)}>{s}</button>)}</div></div>
-      {mode === 'local' && page === 'Dashboard' && <div className="local-notice"><span className="status-dot local" /><span>{visualPreview ? 'Preview · sample data' : 'Saved on this device'}</span><button className="text-button" onClick={() => setHelp(true)}>Backup<ArrowRight size={14} /></button></div>}
-      {page === 'Dashboard' && <Dashboard state={state} month={month} scope={scope} onEdit={onEdit} go={navigate} awareness={<DailyCheckInCard state={state} today={today} onConfirm={confirmCheckIn} onReview={reviewDay} />} />}{page === 'Transactions' && <Ledger state={state} month={month} scope={scope} onEdit={onEdit} add={add} presetDate={ledgerDate} />}{page === 'Budget' && <><BudgetView state={state} month={month} scope={scope} onEdit={setBudgetEdit} /><details className="panel disclosure-panel"><summary>Payment accounts &amp; due dates</summary><FundingSection state={state} month={month} scope={scope} onEdit={setFundingEdit} /></details></>}{page === 'Accounts' && <AccountsView state={state} month={month} scope={scope} onEdit={setAccountEdit} onReconcile={setComparisonAccount} />}{page === 'Insights' && <><Insights state={state} month={month} scope={scope} /><div className="awareness-after"><FinancialLeakPanel state={state} month={month} scope={scope} today={today} onCreate={addAction} onDismiss={dismissLeak} onEditTransaction={onEdit} /></div></>}
+    <main id="main" className="main-content">{mainPage !== page && <button className="text-button advanced-back" onClick={() => navigate('Advanced')}>Back to Advanced</button>}<div className="page-heading"><div><h1>{pageTitles[page]}</h1></div>{page !== 'Notes & Reminders' && <button className="button primary heading-add" onClick={add}><Plus size={18} /><span>Add entry</span></button>}</div><div className="view-toolbar">{['Transactions', 'Budget', 'Insights', 'Money Flow', 'Check-In History', 'Month-End Review'].includes(page) && <div className="month-picker"><button className="icon-button" aria-label="Previous month" onClick={() => setMonth(stepMonth(month, -1))}><ChevronLeft size={18} /></button><label><CalendarDays size={17} /><span>{monthLabel(month)}</span><input aria-label="Select month" type="month" value={month} onChange={e => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(e.target.value)) setMonth(e.target.value); }} /></label><button className="icon-button" aria-label="Next month" onClick={() => setMonth(stepMonth(month, 1))}><ChevronRight size={18} /></button></div>}<div className="segmented scope-picker" aria-label="Account scope" style={page === 'Check-In History' ? { display: 'none' } : undefined}>{(['Personal', 'Business', 'All'] as const).map(s => <button key={s} aria-pressed={scope === s} className={scope === s ? 'active' : ''} onClick={() => setScope(s)}>{s}</button>)}</div></div>
+      {mode === 'local' && page === 'Advanced' && <div className="local-notice"><span className="status-dot local" /><span>{visualPreview ? 'Preview · sample data' : 'Saved on this device'}</span><button className="text-button" onClick={() => setHelp(true)}>Backup<ArrowRight size={14} /></button></div>}
+      {page === 'Dashboard' && <HomeView state={state} scope={scope} onEdit={onEdit} onAccounts={() => navigate('Accounts')} onBudget={() => { setMonth(currentMonth()); navigate('Budget'); }} onBank={openBank} onAdd={startTransaction} onEntries={showEntries} />}
+      {page === 'Transactions' && <ActivityView key={`${month}-${ledgerDate}`} state={state} month={month} scope={scope} onEdit={onEdit} presetDate={ledgerDate} />}
+      {page === 'Budget' && <BudgetList state={state} month={month} scope={scope} onEdit={b => { setBudgetEdit(b); setPlanOpen(true); }} onAdd={() => { setBudgetEdit(undefined); setPlanOpen(true); }} onIncome={() => setIncomeOpen(true)} onPay={payBudget} onEntries={showEntries} />}
+      {page === 'Accounts' && <AccountsList state={state} scope={scope} onBank={openBank} onEdit={a => { setAccountDetails(a); setAccountOpen(true); }} onAdd={() => { setAccountDetails(undefined); setAccountOpen(true); }} onEntries={showEntries} />}
+      {page === 'Advanced' && <><MoreMenu inline local={mode === 'local'} refreshing={refreshing} onClose={() => {}} onNavigate={navigate} onSettings={() => setSettingsOpen(true)} onStorage={() => setHelp(true)} onRefresh={() => void load()} /><details className="simple-disclosure"><summary>Account history & extra tools<ChevronRight size={16} /></summary><button className="text-button" onClick={() => setHistory(true)}>Full change history</button><button className="text-button" onClick={() => setAdvancedEntry(true)}>Detailed entry form{aiEnabled ? ' & AI draft' : ''}</button>{state.accounts.filter(a => scope === 'All' || a.scope === scope).map(a => <details className="advanced-account" key={a.id}><summary>{a.name} · Balance history</summary><ReconciliationPanel state={state} account={a} onCompare={() => setComparisonAccount(a)} /></details>)}{state.accounts.some(a => a.hidden) && <><h3>Hidden accounts</h3>{state.accounts.filter(a => a.hidden).map(a => <button className="text-button" key={a.id} onClick={() => { setAccountDetails(a); setAccountOpen(true); }}>{a.name} · Edit</button>)}</>}</details><details className="simple-disclosure"><summary>Payment details & automatic bills<ChevronDown size={16} /></summary><FundingSection state={state} month={currentMonth()} scope={scope} onEdit={b => { setMonth(currentMonth()); setFundingEdit(b); }} /></details><details className="simple-disclosure"><summary>Entry review & reminders<ChevronDown size={16} /></summary><DailyCheckInCard state={state} today={today} onConfirm={confirmCheckIn} onReview={reviewDay} /></details></>}
+      {page === 'Insights' && <><SpendingButtons state={state} scope={scope} onEntries={showEntries} /><details className="simple-disclosure"><summary>Spending patterns & charts<ChevronDown size={18} /></summary><Insights state={state} month={month} scope={scope} /></details><details className="simple-disclosure"><summary>Things to review<ChevronDown size={18} /></summary><FinancialLeakPanel state={state} month={month} scope={scope} today={today} onCreate={addAction} onDismiss={dismissLeak} onEditTransaction={onEdit} /></details></>}
       {page === 'Money Flow' && <MoneyFlow state={state} month={month} scope={scope} onAddSource={() => { setSourceEdit(undefined); setSourceOpen(true); }} onEditSource={s => { setSourceEdit(s); setSourceOpen(true); }} />}
       {page === 'Check-In History' && <CheckInHistory key={month} state={state} month={month} today={today} onConfirm={confirmCheckIn} onReview={reviewDay} />}
       {page === 'Month-End Review' && <MonthEndReview key={`${month}-${scope}`} state={state} month={month} scope={scope} onSave={saveMonthReview} />}
       {page === 'Notes & Reminders' && <NotesReminders state={state} scope={scope} today={today} onAdd={() => addAction()} onEdit={editAction} onSave={saveAction} />}</main></div>
-    {page !== 'Notes & Reminders' && <button className="mobile-add" aria-label="Add transaction" onClick={add}><Plus size={23} /><span>Add transaction</span></button>}<nav className="mobile-nav" aria-label="Mobile navigation">{navigation.filter(item => ['Dashboard', 'Transactions', 'Budget', 'Accounts', 'Insights'].includes(item.name)).map(({ name, icon: Icon }) => <button key={name} aria-label={name} className={page === name ? 'active' : ''} aria-current={page === name ? 'page' : undefined} onClick={() => { setPage(name); setLedgerDate(''); window.scrollTo({ top: 0 }); }}><Icon size={21} /><span>{name === 'Transactions' ? 'Entries' : name === 'Dashboard' ? 'Home' : name}</span></button>)}</nav>
+    {page !== 'Notes & Reminders' && <button className="mobile-add" aria-label="Add entry" onClick={add}><Plus size={23} /><span>Add entry</span></button>}<nav className="mobile-nav" aria-label="Mobile navigation">{navigation.filter(item => ['Dashboard', 'Transactions', 'Budget', 'Accounts', 'Advanced'].includes(item.name)).map(({ name, icon: Icon }) => <button key={name} aria-label={name === 'Dashboard' ? 'Home' : name === 'Transactions' ? 'Activity' : name} className={mainPage === name ? 'active' : ''} aria-current={mainPage === name ? 'page' : undefined} onClick={() => { setPage(name); setLedgerDate(''); window.scrollTo({ top: 0 }); }}><Icon size={21} /><span>{name === 'Transactions' ? 'Activity' : name === 'Dashboard' ? 'Home' : name}</span></button>)}</nav>
     {moreOpen && <MoreMenu local={mode === 'local'} refreshing={refreshing} onClose={() => setMoreOpen(false)} onNavigate={navigate} onSettings={() => setSettingsOpen(true)} onStorage={() => setHelp(true)} onRefresh={() => void load()} />}
-    <div className={`toast ${message ? 'visible' : ''}`} role="status" aria-live="polite">{message && <><Check size={17} />{message}{message === 'Saved' && undo && <button type="button" className="text-button" disabled={undoBusy} onClick={() => void undoSave()}>{undoBusy ? 'Undoing…' : 'Undo'}</button>}</>}</div>
-    {fundingEdit && <FundingForm state={state} budget={fundingEdit} month={month} onSave={saveFunding} onClose={() => setFundingEdit(undefined)} />}
+    <div className={`toast ${message ? 'visible' : ''}`} role="status" aria-live="polite">{message && <><Check size={17} />{message}{message === 'Saved' && <button type="button" className="text-button" onClick={add}>Add another</button>}{message === 'Saved' && undo && <button type="button" className="text-button" disabled={undoBusy} onClick={() => void undoSave()}>{undoBusy ? 'Undoing…' : 'Undo'}</button>}</>}</div>
+    {fundingEdit && <FundingForm state={state} budget={fundingEdit} month={month} onBudgetEdit={() => { setBudgetEdit(fundingEdit); setFundingEdit(undefined); setPlanOpen(true); }} onSave={saveFunding} onClose={() => setFundingEdit(undefined)} />}
     {settingsOpen && <SettingsForm state={state} onSave={saveSettings} onClose={() => setSettingsOpen(false)} />}
     {sourceOpen && <IncomeSourceForm state={state} edit={sourceEdit} onSave={saveSource} onClose={() => setSourceOpen(false)} />}
-    {actionOpen && <ActionForm state={state} scope={scope} edit={actionEdit} preset={actionPreset} onClose={() => setActionOpen(false)} onSave={saveAction} />}{transactionOpen && <TransactionForm state={state} edit={edit} initialType={draftType} onClose={() => setTransactionOpen(false)} onSave={saveTransaction} aiEnabled={aiEnabled} />}
+    {actionOpen && <ActionForm state={state} scope={scope} edit={actionEdit} preset={actionPreset} onClose={() => setActionOpen(false)} onSave={saveAction} />}{transactionOpen && <SimpleEntry state={state} edit={edit} preset={entryPreset} initialType={draftType} initialScope={scope} onClose={() => setTransactionOpen(false)} onSave={saveTransaction} onRemove={deleteEntry} />}
+    {advancedEntry && <TransactionForm state={state} onClose={() => setAdvancedEntry(false)} onSave={saveTransaction} aiEnabled={aiEnabled} />}
+    {entryList && !transactionOpen && <EntriesDialog title={entryList.title} state={state} entries={state.transactions.filter(t => entryList.ids.includes(t.id))} onEdit={onEdit} onClose={() => setEntryList(undefined)} />}
+    {bankOpen && !transactionOpen && <BankCheck state={state} scope={bankAccount?.scope ?? scope} initialAccount={bankAccount} onEdit={onEdit} onSave={saveBank} onClose={() => setBankOpen(false)} onMissing={a => { setBankAccount(a); setEdit(undefined); setEntryPreset({accountId:a.id, scope:a.scope}); setDraftType('Expense'); setTransactionOpen(true); }} />}
+    {planOpen && <BudgetEditor state={state} budget={budgetEdit} month={month} scope={scope} onSave={v => saveSimple('budgets', 'budget-items', v, validateBudgetChange)} onClose={() => { setPlanOpen(false); setBudgetEdit(undefined); }} />}
+    {incomeOpen && <IncomeEditor state={state} month={month} scope={scope} onSave={v => saveSimple('income', 'planned-income', v, validateIncomeChange)} onClose={() => setIncomeOpen(false)} />}
+    {accountOpen && <AccountEditor account={accountDetails} scope={scope} onSave={v => saveSimple('accounts', 'account-details', v, validateAccountChange)} onClose={() => setAccountOpen(false)} />}
     {comparisonAccount && <ReconciliationForm state={state} account={state.accounts.find(a => a.id === comparisonAccount.id)!} onSave={saveReconciliation} onClose={() => setComparisonAccount(undefined)} />}
     {accountEdit && <ValueEditor title="Update account balance" label={`${accountEdit.name} •••• ${accountEdit.lastFour}`} initial={currentBalance(state, accountEdit)} allowNegative snapshot note="Sets a new starting balance. Later movements update it. Use Compare actual balance to check a difference without resetting it." onClose={() => setAccountEdit(undefined)} onSave={saveBalance} />}
-    {budgetEdit && <ValueEditor title={`Plan for ${budgetEdit.label}`} label="Planned amount ($)" initial={budgetEdit.amountCents} note={`Changes apply only to ${monthLabel(month)}. Other months keep their plans.`} onClose={() => setBudgetEdit(undefined)} onSave={saveBudget} />}
+
     {help && <Modal title="Storage & backup" onClose={() => setHelp(false)}><div className="help-content"><span className="connection-label"><span className={`status-dot ${mode === 'local' ? 'local' : ''}`} />{mode === 'local' ? 'On-device storage' : firebaseConfig ? 'Connected to Firestore' : 'Connected to Google Sheets'}</span><p>{mode === 'local' ? 'Records are saved in this browser. Download a backup before clearing browser data.' : firebaseConfig ? 'Records are saved in your private cloud tracker. Refresh data to load changes from another device.' : 'Your transactions, accounts, and monthly plans are stored in your private Google Sheet. Edits preserve previous records.'}</p>{mode === 'local' && <><h3>Connect cloud storage</h3><p>Follow the setup guide to connect Firestore with Google sign-in. Export a backup before switching. Importing requires your review and leaves device records intact.</p><a className="button secondary" href="https://github.com/Godz-iAgency/Cash-Flow-Tracker#firestore-and-sheets" target="_blank" rel="noreferrer">Open setup guide<ArrowUpRight size={16} /></a></>}{firebaseConfig && <><h3>Google Sheets reports</h3><p>Export a dated report. Editing the spreadsheet does not change your tracker.</p><button className="button secondary" disabled={!sheetsExportEnabled || exporting} onClick={async () => { setExportError(''); setExporting(true); try { const result = await api<{ tabs: string[] }>('sheets/export', {}); setMessage(`Exported ${result.tabs.length} report tabs to Google Sheets.`); } catch (e) { setExportError((e as Error).message); } finally { setExporting(false); } }}>{exporting ? 'Exporting…' : 'Export to Google Sheets'}</button>{!sheetsExportEnabled && <p>Connect your private spreadsheet on the server to enable exports.</p>}{exportError && <p className="form-error" role="alert">{exportError}</p>}</>}<div className="help-actions"><button className="button secondary" onClick={download}><Download size={16} />Export full backup</button><button className="button secondary" onClick={() => { setHelp(false); setHistory(true); }}><ShieldCheck size={16} />Audit history</button>{mode === 'cloud' && <button className="text-button" onClick={() => void logout()}><LogOut size={16} />Sign out</button>}</div></div></Modal>}
     {history && <Modal title="Audit history" subtitle="Previous versions are preserved whenever an entry changes." onClose={() => setHistory(false)} wide>{state.audit.length ? <div className="audit-list">{[...state.audit].reverse().map(a => <details key={a.id}><summary><span>{a.entity === 'transaction' ? a.before ? 'Transaction edited' : 'Transaction added' : a.entity === 'account' ? 'Balance updated' : a.entity === 'budget' ? 'Monthly plan updated' : a.entity === 'financial action' ? 'Financial action saved' : a.entity === 'daily check-in' ? 'Daily check-in confirmed' : a.entity === 'leak review' ? 'Review dismissed' : a.entity === 'expense-funding' ? 'Expense funding updated' : a.entity === 'settings' ? 'Tracker settings updated' : a.entity === 'income-sources' ? 'Income source updated' : a.entity === 'balance-reconciliations' ? 'Balance comparison saved' : 'Month review notes saved'}</span><small>{new Date(a.at).toLocaleString()}</small></summary><div className="audit-versions"><div><h3>Before</h3><pre>{JSON.stringify(a.before, null, 2)}</pre></div><div><h3>After</h3><pre>{JSON.stringify(a.after, null, 2)}</pre></div></div></details>)}</div> : <Empty title="No changes recorded" text="Added and edited records appear here." />}</Modal>}
   </div>;

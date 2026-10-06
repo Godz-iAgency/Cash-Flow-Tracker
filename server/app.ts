@@ -12,6 +12,7 @@ import { balanceSnapshotIds, validSnapshot, validateFunding, validateIncomeSourc
 import { validateReconciliation } from '../shared/reconciliation.js';
 import { detectLeaks } from '../shared/leaks.js';
 import { undoEntry } from '../shared/undo.js';
+import { bankCheck, removeEntry, validateAccountChange, validateBudgetChange, validateIncomeChange } from '../shared/simple.js';
 
 export function createApp({ hosted = process.env.VERCEL === '1' } = {}) {
   const app = express();
@@ -105,6 +106,29 @@ export function createApp({ hosted = process.env.VERCEL === '1' } = {}) {
     res.json(await exportSnapshot(await readState()));
   });
   app.get('/api/state', async (_req, res) => res.json(await readState()));
+  const planChanges = { 'budget-items': { table: 'budgets', validate: validateBudgetChange }, 'planned-income': { table: 'income', validate: validateIncomeChange }, 'account-details': { table: 'accounts', validate: validateAccountChange } } as const;
+  for (const [route, change] of Object.entries(planChanges)) app.post(`/api/${route}`, async (req, res) => {
+    res.json(await mutate(async () => {
+      const state = await readState(), after = change.validate(req.body, state);
+      const before = state[change.table].filter(r => r.id === after.id);
+      await writeRecords([{ table: change.table, records: [after] }, { table: 'audit', records: [{ id: randomUUID(), entity: route, entityId: after.id, at: new Date().toISOString(), before, after }] }]);
+      return after;
+    }));
+  });
+  app.post('/api/bank-check', async (req, res) => {
+    res.json(await mutate(async () => {
+      const state = await readState(), result = bankCheck(req.body, state);
+      await writeRecords([{ table: 'accounts', records: result.accounts }, { table: 'balanceReconciliations', records: result.balanceReconciliations }, { table: 'dailyCheckIns', records: result.dailyCheckIns }, { table: 'audit', records: [{ id: randomUUID(), entity: 'bank check', entityId: String(req.body.accountId), at: new Date().toISOString(), before: state.accounts.find(a => a.id === req.body.accountId), after: result }] }]);
+      return result;
+    }));
+  });
+  app.post('/api/transactions/:id/remove', async (req, res) => {
+    res.json(await mutate(async () => {
+      const state = await readState(), after = removeEntry(state, String(req.params.id), req.body.revision);
+      await writeRecords([{ table: 'transactions', records: [after] }, { table: 'audit', records: [{ id: randomUUID(), entity: 'entry removed', entityId: after.id, at: after.updatedAt, before: state.transactions.find(t => t.id === after.id), after }] }]);
+      return after;
+    }));
+  });
   app.post('/api/transactions', async (req, res) => {
     const result = await mutate(async () => {
       const state = await readState(true);

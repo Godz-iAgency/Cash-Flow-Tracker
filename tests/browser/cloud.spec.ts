@@ -24,7 +24,7 @@ for (const width of [320, 497, 1440]) test(`reviewed cloud import preserves devi
   await expect(submit).toBeDisabled();
   await page.getByRole('checkbox', { name: 'I have kept a backup and reviewed these records.' }).check();
   await expect(submit).toBeEnabled(); await submit.click();
-  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
   expect(payload).toEqual({ confirmed: true, state: source });
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!))).toEqual(source);
 });
@@ -68,7 +68,7 @@ for (const { width, scale } of [{ width: 320, scale: 1 }, { width: 497, scale: 1
   await page.getByRole('checkbox', { name: confirmation }).check();
   await submit.scrollIntoViewIfNeeded(); await expect(submit).toBeInViewport();
   if (width === 497) await page.screenshot({ path: '.local/screenshots/cloud-backup-review-497.png', fullPage: true });
-  await submit.click(); await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  await submit.click(); await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
   expect(payload).toEqual({ confirmed: true, state: source });
   expect(await page.evaluate(() => localStorage.getItem('cash-flow-tracker-v1'))).toBeNull();
 });
@@ -108,7 +108,7 @@ test('failed import retains the reviewed backup and retry opens the tracker once
   await expect(page.getByRole('alert')).toHaveText('Connection interrupted. Try again.');
   await expect(page.getByRole('checkbox', { name: confirmation })).toBeChecked();
   await expect(submit).toBeEnabled(); await submit.click();
-  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
   expect(attempts).toBe(2);
 });
 
@@ -123,6 +123,6 @@ test('tracker load failure after a successful import retries the read without re
   await page.getByRole('button', { name: importButton }).click();
   await expect(page.getByRole('heading', { name: 'Connection unavailable' })).toBeVisible();
   await page.getByRole('button', { name: 'Try again' }).click();
-  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
   expect(writes).toBe(1); expect(reads).toBe(2);
 });

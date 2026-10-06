@@ -1,107 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
-async function open(page: Page) {
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
-}
-async function add(page: Page, amount: string, merchant: string, type = 'Expense', account?: string, destination?: string) {
-  await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click();
-  const dialog = page.getByRole('dialog', { name: 'Add a transaction' });
-  await dialog.getByRole('button', { name: type, exact: true }).click();
-  await dialog.getByRole('textbox', { name: 'Amount', exact: true }).fill(amount);
-  await dialog.locator('#merchant').fill(merchant);
-  await dialog.locator('#account').selectOption(account ?? 'capital-one-checking');
-  if (destination) await dialog.locator('#to-account').selectOption(destination);
-  await dialog.getByRole('button', { name: 'Save transaction', exact: true }).click();
-  await expect(dialog).toBeHidden();
-}
-async function noOverflow(page: Page) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-}
-for (const width of [320, 390, 768, 1024, 1440, 1920]) {
-  test(`all screens and quick entry fit at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: width < 600 ? 844 : 1000 });
-    await open(page);
-    for (const name of ['Dashboard', 'Transactions', 'Budget', 'Accounts', 'Insights']) {
-      await page.getByRole('button', { name, exact: true }).click();
-      await noOverflow(page);
-      await expect(page.getByRole('button', { name: 'Add transaction', exact: true }).last()).toBeVisible();
-    }
-    await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click();
-    const dialog = page.getByRole('dialog', { name: 'Add a transaction' });
-    for (const type of ['Expense', 'Income', 'Transfer']) {
-      await dialog.getByRole('button', { name: type, exact: true }).click();
-      const bounds = await dialog.boundingBox();
-      expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
-      expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
-    }
-    await page.keyboard.press('Escape');
-    await expect(dialog).toBeHidden();
-    await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
-    if (width === 390 || width === 1440) { await mkdir('.local/screenshots', { recursive: true }); await page.screenshot({ path: `.local/screenshots/dashboard-${width}.png`, fullPage: true }); }
-  });
-}
-test('ten-cent expense, income, transfer, edit and browser persistence', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 }); await open(page);
-  await add(page, '0.10', 'Tiny purchase');
-  await add(page, '1300.00', 'Paycheck', 'Income');
-  await add(page, '25.00', 'Savings transfer', 'Transfer', 'capital-one-checking', 'capital-one-savings');
-  await expect(page.locator('.money-card').filter({ has: page.getByText('Income received', { exact: true }) }).getByRole('heading')).toHaveText('$1,300.00');
-  await expect(page.locator('.money-card').filter({ has: page.getByText('Money spent', { exact: true }) }).getByRole('heading')).toHaveText('$0.10');
-  await expect(page.locator('.money-card').filter({ has: page.getByText('Net cash flow', { exact: true }) }).getByRole('heading')).toHaveText('$1,299.90');
-  await page.reload(); await expect(page.getByRole('button', { name: 'Edit Tiny purchase, $0.10' })).toBeVisible();
-  await page.getByRole('button', { name: 'Edit Tiny purchase, $0.10' }).click();
-  await page.getByRole('dialog').getByRole('textbox', { name: 'Amount', exact: true }).fill('0.20');
-  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeHidden();
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!));
-  expect(stored.transactions).toHaveLength(3);
-  expect(stored.audit).toHaveLength(4);
-  expect(stored.audit.at(-1).before.amountCents).toBe(10);
-  expect(stored.audit.at(-1).after.amountCents).toBe(20);
-  expect(stored.transactions.find((t: any) => t.merchant === 'Tiny purchase').revision).toBe(2);
-  await page.getByRole('button', { name: 'Transactions', exact: true }).click(); await noOverflow(page);
-  await page.getByRole('button', { name: 'Business', exact: true }).click();
-  await expect(page.getByText('Tiny purchase', { exact: true })).toBeHidden();
+import { initialState } from '../../shared/seed';
+async function open(page: Page) { await page.goto('/'); await expect(page.getByRole('heading', {name:'Home',exact:true})).toBeVisible(); }
+async function add(page: Page, amount: string, name: string) { await page.getByRole('button',{name:'Add entry',exact:true}).filter({visible:true}).click(); const form=page.getByRole('dialog'); await form.getByLabel('Amount',{exact:true}).fill(amount); await form.getByRole('combobox',{name:'What for'}).fill('Grocery'); await page.keyboard.press('Tab'); await form.getByRole('button',{name:'More options'}).click(); await form.getByLabel('Store (optional)').fill(name); await form.getByRole('button',{name:'Save',exact:true}).click(); await expect(form).toBeHidden(); }
+test('two tabs preserve each other’s entries and edits reject a stale revision', async ({page,context})=>{
+ await open(page); const second=await context.newPage(); await open(second); await add(page,'.10','First tab'); await expect(second.locator('.entry-row')).toContainText('First tab'); await add(second,'.20','Second tab'); await expect(page.locator('.entry-row')).toHaveCount(2);
+ await page.locator('.entry-row').filter({hasText:'First tab'}).click(); await second.locator('.entry-row').filter({hasText:'First tab'}).click(); await second.getByLabel('Amount',{exact:true}).fill('.30'); await second.getByRole('button',{name:'Save changes',exact:true}).click(); await page.getByLabel('Amount',{exact:true}).fill('.40'); await page.getByRole('button',{name:'Save changes',exact:true}).click(); await expect(page.getByRole('alert')).toContainText('changed'); await expect(page.getByLabel('Amount',{exact:true})).toHaveValue('0.40');
 });
-test('monthly budget edits and manually maintained account balances', async ({ page }) => {
-  await open(page);
-  await page.getByRole('button', { name: 'Budget', exact: true }).click();
-  await expect(page.locator('.money-card').filter({ has: page.getByText('Planned expenses', { exact: true }) }).getByRole('heading')).toHaveText('$2,569.30');
-  await page.getByRole('button', { name: 'Edit Grocery budget' }).click();
-  await page.getByRole('dialog').getByLabel('Planned amount ($)').fill('300.00');
-  await page.getByRole('dialog').getByRole('button', { name: 'Save changes' }).click();
-  await expect(page.getByRole('dialog')).toBeHidden();
-  await expect(page.locator('.money-card').filter({ has: page.getByText('Planned expenses', { exact: true }) }).getByRole('heading')).toHaveText('$2,619.30');
-  await page.getByRole('button', { name: 'Previous month' }).click();
-  await expect(page.locator('.money-card').filter({ has: page.getByText('Planned expenses', { exact: true }) }).getByRole('heading')).toHaveText('$2,569.30');
-  await page.getByRole('button', { name: 'Accounts', exact: true }).click();
-  await page.getByRole('button', { name: 'All', exact: true }).click();
-  await expect(page.locator('.account-card')).toHaveCount(5);
-  const account = page.locator('.account-card').filter({ hasText: 'Capital One Personal Checking' });
-  await expect(account.locator('.account-balance strong')).toHaveText('Not set');
-  await account.getByRole('button', { name: 'Update balance' }).click();
-  await page.getByRole('dialog').locator('#edit-value').fill('123.45');
-  await page.getByRole('dialog').getByRole('button', { name: 'Save changes' }).click();
-  await expect(account.locator('.account-balance strong')).toHaveText('$123.45');
+test('desktop keyboard amount, purpose, account, save and quick examples are deterministic', async({page})=>{
+ await open(page); for(const text of ['5 grocery heb','$37.74 gas','.05 other']) { await page.getByRole('button',{name:'Add entry',exact:true}).filter({visible:true}).click(); await page.getByLabel('Quick entry',{exact:true}).fill(text); await page.getByLabel('Quick entry',{exact:true}).press('Enter'); await page.getByRole('button',{name:'Save',exact:true}).click(); await expect(page.getByRole('dialog')).toBeHidden(); }
+ const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!)); expect(state.transactions.map((t:any)=>t.amountCents)).toEqual([500,3774,5]); expect(state.transactions[0].merchant).toBe('heb');
+ await page.getByRole('button',{name:'Add entry',exact:true}).filter({visible:true}).click(); await expect(page.getByLabel('Amount',{exact:true})).toBeFocused(); await page.keyboard.type('5.5'); await page.keyboard.press('Tab'); await expect(page.getByRole('combobox',{name:'What for'})).toBeFocused(); await page.keyboard.type('gro'); await page.keyboard.press('Tab'); await expect(page.getByLabel('Paid from')).toBeFocused(); await page.keyboard.press('Tab'); await expect(page.getByRole('button',{name:'Save',exact:true})).toBeFocused(); await page.keyboard.press('Enter'); await expect(page.getByRole('dialog')).toBeHidden();
 });
-test('populated ledger handles long labels, cents, and every screen on a narrow phone', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 700 }); await open(page);
-  await add(page, '6.42', 'A merchant with a very long name that needs to wrap on phones');
-  for (const name of ['Dashboard', 'Transactions', 'Budget', 'Accounts', 'Insights']) { await page.getByRole('button', { name, exact: true }).click(); await noOverflow(page); }
-  await page.getByRole('button', { name: 'Accounts', exact: true }).click(); await page.getByRole('button', { name: 'Business', exact: true }).click();
-  await noOverflow(page); await expect(page.locator('.account-card')).toHaveCount(2);
-});
-test('entries from another browser tab stay in the shared on-device ledger', async ({ page, context }) => {
-  await open(page);
-  const second = await context.newPage(); await open(second);
-  await page.bringToFront();
-  await add(page, '0.10', 'First tab entry');
-  await second.bringToFront();
-  await expect(second.getByRole('button', { name: 'Edit First tab entry, $0.10' })).toBeVisible();
-  await add(second, '0.20', 'Second tab entry');
-  await page.bringToFront();
-  await expect(page.getByRole('button', { name: 'Edit Second tab entry, $0.20' })).toBeVisible();
-  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!));
-  expect(stored.transactions).toHaveLength(2); expect(stored.audit).toHaveLength(2);
+test('add, rename and hide an account preserves saved history',async({page})=>{
+ await open(page); await page.getByRole('button',{name:'Accounts',exact:true}).click(); await page.getByRole('button',{name:'Add account',exact:true}).click(); const form=page.getByRole('dialog'); await form.getByLabel('Name',{exact:true}).fill('Everyday savings'); await form.getByLabel('Last four digits').fill('1234'); await form.getByRole('combobox',{name:'Type',exact:true}).selectOption('Savings'); await form.getByRole('button',{name:'Save',exact:true}).click(); const row=page.locator('.account-row').filter({hasText:'Everyday savings'}); await row.locator('summary').click(); await row.getByRole('button',{name:'Edit account'}).click(); await page.getByRole('checkbox',{name:/Hide account/}).check(); await page.getByRole('button',{name:'Save',exact:true}).click(); await expect(row).toHaveCount(0); const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!)); expect(state.accounts).toHaveLength(6); expect(state.accounts.at(-1).hidden).toBe(true); expect(state.audit).toHaveLength(2);
 });

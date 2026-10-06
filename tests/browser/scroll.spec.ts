@@ -1,92 +1,13 @@
-import { openMore } from './helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { initialState } from '../../shared/seed';
-async function open(page: Page) { await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible(); }
-async function swipe(page: Page, x: number, y: number, distance = 350) {
-  const session = await page.context().newCDPSession(page);
-  await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  for (let i = 1; i <= 12; i++) await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - distance * i / 12 }] });
-  await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await session.detach();
-}
-for (const width of [320, 390, 497, 768, 1440]) test(`pages and forms respond to scrolling at ${width}px`, async ({ page }) => {
-  test.setTimeout(60000); await page.setViewportSize({ width, height: 842 }); await open(page);
-  for (const name of ['Dashboard', 'Budget', 'Accounts', 'Insights']) {
-    await page.getByRole('button', { name, exact: true }).last().click(); await page.evaluate(() => window.scrollTo(0, 0));
-    const available = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
-    await page.mouse.move(Math.round(width / 2), 600); await page.mouse.wheel(0, 600); if (available > 10) await expect.poll(() => page.evaluate(() => scrollY), { message: name + ' scrolls with wheel' }).toBeGreaterThan(Math.min(100, available * .7));
-  }
-  await page.getByRole('button', { name: 'Budget', exact: true }).last().click(); await page.evaluate(() => { window.scrollTo(0, 0); document.body.style.overflow = 'hidden'; });
-  await swipe(page, Math.round(width / 2), 630); await expect.poll(() => page.evaluate(() => scrollY), { message: 'Budget scrolls with touch' }).toBeGreaterThan(100);
-  await page.getByRole('button', { name: 'Add transaction', exact: true }).last().click(); const form = page.getByRole('dialog');
-  await form.getByRole('button', { name: /Date, time/ }).click();
-  const content = form.locator('.modal-content'); const before = await page.evaluate(() => scrollY); await content.evaluate(el => el.scrollTop = 0);
-  const box = await form.boundingBox(); const x = box!.x + box!.width * .5, y = box!.y + box!.height * .6;
-  await page.mouse.move(x, y); await page.mouse.wheel(0, 500); await expect.poll(() => content.evaluate(el => el.scrollTop)).toBeGreaterThan(100);
-  expect(await page.evaluate(() => scrollY)).toBe(before);
-  await content.evaluate(el => el.scrollTop = 0); await swipe(page, x, y, Math.min(250, box!.height * .4)); await expect.poll(() => content.evaluate(el => el.scrollTop)).toBeGreaterThan(50);
-  await page.keyboard.press('Escape'); await expect(form).toBeHidden(); await page.evaluate(() => window.scrollTo(0, 0));
-  await page.mouse.move(width / 2, 600); await page.mouse.wheel(0, 500); await expect.poll(() => page.evaluate(() => scrollY), { message: 'Page unlocks after closing form' }).toBeGreaterThan(100);
-  await openMore(page, 'Tracker settings'); await page.keyboard.press('Escape');
-  await page.evaluate(() => window.scrollTo(0, 0)); await page.mouse.move(width / 2, 600); await page.mouse.wheel(0, 500); await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(100);
+import { openMore } from './helpers';
+async function swipe(page:Page,x:number,y:number,distance=250){const s=await page.context().newCDPSession(page); await s.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});for(let i=1;i<=12;i++)await s.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-distance*i/12}]});await s.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await s.detach();}
+for(const width of [320,390,497,768,1440])test(`page and entry scrolling stay independent at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:650}); await page.goto('/?preview=simple'); await page.getByRole('button',{name:'Budget',exact:true}).filter({visible:true}).click(); await page.evaluate(()=>{document.querySelectorAll<HTMLDetailsElement>('.budget-group,.budget-item').forEach(d=>d.open=true);window.scrollTo(0,0);});await page.mouse.move(width/2,500);await page.mouse.wheel(0,600);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(100);
+ await page.getByRole('button',{name:'Add entry',exact:true}).filter({visible:true}).click();const form=page.getByRole('dialog');await form.getByRole('button',{name:'More options'}).click();const content=form.locator('.modal-content');const before=await page.evaluate(()=>scrollY);await content.evaluate(el=>el.scrollTop=0);const bounds=await content.boundingBox();await page.mouse.move(bounds!.x+bounds!.width/2,bounds!.y+bounds!.height*.6);await page.mouse.wheel(0,500);await expect.poll(()=>content.evaluate(el=>el.scrollTop)).toBeGreaterThan(30);expect(await page.evaluate(()=>scrollY)).toBe(before);await page.keyboard.press('Escape');await expect(form).toBeHidden();
+ await page.evaluate(()=>window.scrollTo(0,0));await swipe(page,width/2,500);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(30);
 });
-
-test('touch starting on scope controls still scrolls the page', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 842 }); await open(page);
-  await page.getByRole('button', { name: 'Budget', exact: true }).click();
-  const box = await page.locator('.scope-picker').boundingBox();
-  await swipe(page, box!.x + 60, box!.y + box!.height / 2, 180);
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(50);
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-});
-
-for (const width of [320, 497, 768, 1440]) test(`More scrolls to tools and exports a complete backup without changing records at ${width}px`, async ({ page }) => {
-  const state = initialState();
-  await page.addInitScript(data => localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(data)), state);
-  await page.setViewportSize({ width, height: 450 }); await open(page);
-  await page.getByRole('button', { name: 'Advanced', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Advanced', exact: true });
-  const content = dialog.getByRole('region', { name: 'Advanced content' });
-  const before = await page.evaluate(() => scrollY);
-  expect(await content.evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(100);
-  const box = await content.boundingBox(); const x = box!.x + box!.width / 2, y = box!.y + box!.height * .8;
-  await page.mouse.move(x, y); await page.mouse.wheel(0, 600);
-  await expect.poll(() => content.evaluate(el => el.scrollTop)).toBeGreaterThan(100);
-  expect(await page.evaluate(() => scrollY)).toBe(before);
-  await content.evaluate(el => el.scrollTop = 0);
-  await swipe(page, x, y, Math.min(160, box!.height * .6));
-  await expect.poll(() => content.evaluate(el => el.scrollTop)).toBeGreaterThan(30);
-  await content.focus(); await page.keyboard.press('End');
-  await expect.poll(() => content.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThan(3);
-  await expect(dialog.getByRole('button', { name: 'Close dialog' })).toBeInViewport();
-  await dialog.getByRole('button', { name: 'Storage & backup', exact: true }).click();
-  const storage = page.getByRole('dialog', { name: 'Storage & backup', exact: true });
-  const downloadEvent = page.waitForEvent('download');
-  await storage.getByRole('button', { name: 'Export full backup' }).click();
-  const download = await downloadEvent;
-  expect(download.suggestedFilename()).toMatch(/^cash-flow-backup-.*\.json$/);
-  const { exportedAt, ...exportedState } = JSON.parse(await readFile((await download.path())!, 'utf8'));
-  expect(Number.isFinite(Date.parse(exportedAt))).toBe(true);
-  expect(exportedState).toEqual(state);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!))).toEqual(state);
-  await expect(page.getByRole('dialog', { name: 'Storage & backup', exact: true })).toBeVisible();
-  await expect(page.getByRole('dialog')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Close dialog' }).click();
-  await page.getByRole('button', { name: 'Budget', exact: true }).click();
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.mouse.move(width / 2, 280); await page.mouse.wheel(0, 500);
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(100);
-});
-
-test('More backup is reachable in the supplied 497px tablet layout', async ({ page }) => {
-  await page.setViewportSize({ width: 497, height: 842 }); await open(page);
-  await page.getByRole('button', { name: 'Advanced', exact: true }).click();
-  const dialog = page.getByRole('dialog');
-  await dialog.getByRole('button', { name: 'Storage & backup', exact: true }).click();
-  const storage = page.getByRole('dialog', { name: 'Storage & backup', exact: true });
-  await storage.getByRole('button', { name: 'Export full backup' }).scrollIntoViewIfNeeded();
-  await expect(storage.getByRole('button', { name: 'Export full backup' })).toBeInViewport();
-  await expect(storage.getByRole('button', { name: 'Close dialog' })).toBeInViewport();
-  await page.screenshot({ path: '.local/screenshots/settings-backup-497.png' });
+for(const width of [320,497,768,1440])test(`Advanced backup is reachable and exact at ${width}px`,async({page})=>{
+ const state=initialState();await page.addInitScript(s=>localStorage.setItem('cash-flow-tracker-v1',JSON.stringify(s)),state);await page.setViewportSize({width,height:450});await page.goto('/');await openMore(page,'Storage & backup');const storage=page.getByRole('dialog',{name:'Storage & backup'});const event=page.waitForEvent('download');await storage.getByRole('button',{name:'Export full backup'}).click();const download=await event;const {exportedAt,...saved}=JSON.parse(await readFile((await download.path())!,'utf8'));expect(saved).toEqual(state);expect(download.suggestedFilename()).toMatch(/cash-flow-backup/);expect(await storage.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
 });

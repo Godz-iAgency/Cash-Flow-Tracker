@@ -5,6 +5,7 @@ import './styles.css';
 import './theme.css';
 import './water-tokens.css';
 import './water-effects.css';
+import './simple.css';
 import { WaterThemeProvider } from './WaterTheme';
 import { PwaProvider } from './Pwa';
 

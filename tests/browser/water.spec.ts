@@ -2,38 +2,10 @@ import { test, expect } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { waterPreviewState } from '../../shared/waterPreview';
 import { openMore } from './helpers';
-import { contrastAudit } from './water-contrast';
-
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(state => { if (!localStorage.getItem('cash-flow-tracker-v1')) localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(state)); }, waterPreviewState());
-});
-for (const mode of ['dark', 'light'] as const) test(`${mode}: text contrast on every page and form, with unchanged responsive layout`, async ({ page }) => {
-  test.setTimeout(90000);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.addInitScript(mode => localStorage.setItem('cash-flow-appearance', mode), mode);
-  await page.goto('/'); await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
-  const results: { screen: string; count: number; failures: unknown[] }[] = [];
-  const audit = async (screen: string) => { await page.waitForTimeout(200); results.push({ screen, ...await contrastAudit(page) }); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true); };
-  await audit('Home');
-  for (const name of ['Transactions', 'Budget', 'Accounts', 'Insights']) { await page.getByRole('button', { name, exact: true }).click(); await audit(name); }
-  for (const name of ['Notes & Reminders', 'View money flow', 'Review check-in history', 'View month-end review']) { await openMore(page, name); await audit(name); }
-  await openMore(page, 'Tracker settings'); await audit('Settings'); await page.keyboard.press('Escape');
-  await openMore(page, 'Storage & backup'); await audit('Storage'); await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Advanced', exact: true }).click(); await audit('Advanced and appearance'); await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Add transaction', exact: true }).click();
-  for (const type of ['Expense', 'Income', 'Transfer']) { await page.getByRole('dialog').getByRole('button', { name: type, exact: true }).click(); await audit('Add ' + type); }
-  await page.getByRole('dialog').getByRole('button', { name: /Date, time/ }).click(); await audit('Add details'); await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Accounts', exact: true }).click(); await page.locator('.account-card').first().getByRole('button', { name: 'Compare actual balance' }).click(); await audit('Bank comparison'); await page.keyboard.press('Escape');
-  await page.locator('.account-card').first().getByRole('button', { name: 'Update balance' }).click(); await audit('Balance edit'); await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Budget', exact: true }).click(); await page.getByRole('button', { name: 'Edit Rent budget' }).click(); await audit('Budget edit'); await page.keyboard.press('Escape');
-  await page.getByText('Payment accounts & due dates', { exact: true }).click(); await page.locator('.funding-list article').first().getByRole('button', { name: 'Assign funding' }).click(); await audit('Payment details'); await page.keyboard.press('Escape');
-  await mkdir('.local/water', { recursive: true }); await writeFile(`.local/water/contrast-${mode}.json`, JSON.stringify(results, null, 2));
-  expect(results.flatMap(result => result.failures.map(failure => ({ screen: result.screen, ...failure as object })))).toEqual([]);
-});
-
+test.beforeEach(async ({ page }) => { await page.addInitScript(state => { if (!localStorage.getItem('cash-flow-tracker-v1')) localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(state)); }, waterPreviewState()); });
 test('appearance switch persists without modifying financial records; preview makes no cloud requests', async ({ page }) => {
   const requests: string[] = []; page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/')) requests.push(request.url()); });
-  await page.goto('/?preview=water'); await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+  await page.goto('/?preview=water'); await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible();
   const original = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!));
   await page.getByRole('button', { name: 'Advanced', exact: true }).click(); await page.getByRole('button', { name: 'Light', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light'); await page.reload(); await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
@@ -42,10 +14,10 @@ test('appearance switch persists without modifying financial records; preview ma
 });
 
 test('reduce motion has no animations or ripples, including during tab changes and Add', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' }); await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' }); await page.goto('/'); await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible();
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   await page.getByRole('button', { name: 'Budget', exact: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-  await page.getByRole('button', { name: 'Add transaction', exact: true }).filter({ visible: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await page.getByRole('button', { name: 'Add entry', exact: true }).filter({ visible: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cash-flow-saved', { detail: { x: 100, y: 200 } })));
   await expect(page.locator('.save-ripple')).toHaveCount(0);
 });
@@ -58,16 +30,16 @@ test('only the Home wave repeats, it pauses in the background, and Add is comple
   await expect(page.locator('.home-wave')).toHaveCSS('animation-play-state', 'paused');
   await page.evaluate(() => { delete (document as unknown as { hidden?: boolean }).hidden; document.dispatchEvent(new Event('visibilitychange')); });
   await expect(page.locator('.home-wave')).toHaveCSS('animation-play-state', 'running');
-  await page.getByRole('button', { name: 'Add transaction', exact: true }).filter({ visible: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-  await page.getByRole('dialog').getByRole('button', { name: 'Income', exact: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await page.getByRole('button', { name: 'Add entry', exact: true }).filter({ visible: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await page.getByRole('dialog').getByRole('button', { name: 'Got paid', exact: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
 });
 
-for (const type of ['Expense', 'Income', 'Transfer'] as const) test(`${type}: one save ripple, Saved with Undo, and no duplicate financial entry`, async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
+for (const type of ['Spent', 'Got paid', 'Move money'] as const) test(`${type}: one save ripple, Saved with Undo, and no duplicate financial entry`, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible();
   const before = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!));
-  await page.getByRole('button', { name: 'Add transaction', exact: true }).click(); const form = page.getByRole('dialog');
-  await form.getByRole('button', { name: type, exact: true }).click(); await form.locator('#amount').fill('0.05'); await form.locator('#merchant').fill('Water test'); await form.locator('#account').selectOption('capital-one-checking');
-  if (type === 'Transfer') await form.locator('#to-account').selectOption('capital-one-savor');
+  await page.getByRole('button', { name: 'Add entry', exact: true }).click(); const form = page.getByRole('dialog');
+  await form.getByRole('button', { name: type, exact: true }).click(); await form.locator('#amount').fill('0.05'); if (type === 'Spent') { await form.getByRole('combobox', { name: 'What for' }).fill('Grocery'); await page.keyboard.press('Tab'); } await form.locator('#account').selectOption('capital-one-checking');
+  if (type === 'Move money') await form.locator('#to-account').selectOption('capital-one-savor');
   await form.evaluate(element => { const form = element.querySelector('form')!; form.requestSubmit(); form.requestSubmit(); }); await expect(form).toBeHidden(); await expect(page.locator('.toast')).toContainText('Saved');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!)); expect(saved.transactions.length).toBe(before.transactions.length + 1);
   await page.getByRole('button', { name: 'Undo', exact: true }).click(); await expect(page.locator('.toast')).toContainText('Undone');

@@ -19,8 +19,8 @@ var serviceAccountConfigured = () => Boolean(process.env.FIREBASE_SERVICE_ACCOUN
 function readFirebaseServiceAccount() {
   let credential;
   try {
-    const text2 = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || readFileSync(process.env.FIREBASE_SERVICE_ACCOUNT_PATH, "utf8");
-    credential = JSON.parse(text2.replace(/^\uFEFF/, ""));
+    const text3 = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || readFileSync(process.env.FIREBASE_SERVICE_ACCOUNT_PATH, "utf8");
+    credential = JSON.parse(text3.replace(/^\uFEFF/, ""));
   } catch {
     throw new Error("The private Firebase credential could not be read. Set its server JSON variable or local file path.");
   }
@@ -78,10 +78,10 @@ function initialState() {
 
 // server/sheets.ts
 var headers = {
-  accounts: ["id", "name", "lastFour", "scope", "type", "balanceCents", "balanceUpdatedAt", "balanceIncludedTransactionIds", "balanceAsOf"],
+  accounts: ["id", "name", "lastFour", "scope", "type", "balanceCents", "balanceUpdatedAt", "balanceIncludedTransactionIds", "balanceAsOf", "hidden", "revision"],
   categories: ["id", "name"],
-  budgets: ["id", "label", "category", "amountCents", "scope", "month"],
-  income: ["id", "label", "amountCents", "scope", "month"],
+  budgets: ["id", "label", "category", "amountCents", "scope", "month", "dueDay", "paymentAccountId", "classification", "hidden", "revision", "aliases"],
+  income: ["id", "label", "amountCents", "scope", "month", "revision"],
   transactions: ["id", "date", "time", "type", "amountCents", "category", "subcategory", "merchant", "description", "accountId", "toAccountId", "scope", "classification", "notes", "createdAt", "updatedAt", "revision", "voided"],
   audit: ["id", "entity", "entityId", "at", "before", "after"],
   notesReminders: ["id", "title", "note", "category", "relatedExpenseId", "relatedAccountId", "scope", "priority", "status", "reminderDate", "amountAffectedCents", "previousCostCents", "newCostCents", "monthlySavingsCents", "annualizedSavingsCents", "createdAt", "completedAt", "updatedAt", "revision"],
@@ -153,7 +153,8 @@ async function initialize() {
   const writes = [];
   names.forEach((table, i) => {
     const row = existing.valueRanges[i]?.values?.[0] ?? [];
-    const legacyLength = table === "dailyCheckIns" ? 6 : table === "accounts" ? 7 : table === "transactions" ? 17 : 0;
+    const legacyLengths = { dailyCheckIns: [6], accounts: [7, 9], transactions: [17], budgets: [6], income: [5] };
+    const legacyLength = legacyLengths[table]?.includes(row.length) ? row.length : 0;
     if (legacyLength && row.length === legacyLength && row.join("|") === sheetHeaders(table).slice(0, legacyLength).join("|")) {
       writes.push({ updateCells: { start: { sheetId: ids[table], rowIndex: 0, columnIndex: legacyLength }, fields: "userEnteredValue", rows: [cells(sheetHeaders(table).slice(legacyLength))] } });
     } else if (row.length && row.join("|") !== sheetHeaders(table).join("|")) throw new Error(`The ${sheetName(table)} sheet has an incompatible header. Existing data has not been overwritten; review the header before retrying.`);
@@ -187,13 +188,12 @@ async function readState() {
       if (key === "dueDay") value = value === "" ? null : Number(value);
       if (key === "transactionsReviewed") value = value === "" ? void 0 : Number(value);
       if (key === "autopay" || key === "completed") value = value === "" && key === "completed" ? void 0 : value === true || value === "true";
-      if (key === "voided") value = value === true || value === "true" ? true : void 0;
+      if (key === "voided" || key === "hidden") value = value === true || value === "true" ? true : void 0;
+      if (["accounts", "budgets", "income"].includes(table) && ["revision", "dueDay", "paymentAccountId", "classification", "aliases"].includes(key) && row[j] === void 0) value = void 0;
       if (key === "before" || key === "after") value = value ? JSON.parse(String(value)) : null;
       return [key, value];
     })));
-    if (table === "transactions") {
-      for (const record of records) if (record.voided === void 0) delete record.voided;
-    }
+    for (const record of records) for (const key of Object.keys(record)) if (record[key] === void 0) delete record[key];
     if (table === "dailyCheckIns") for (const record of records) {
       record.completed ??= true;
       record.completedAt ||= record.confirmedAt;
@@ -268,13 +268,23 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 
 // shared/model.ts
-var money = (cents2) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents2 / 100);
+var money = (cents3) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents3 / 100);
 function localDate(date = /* @__PURE__ */ new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 function monthBudgets(state, month, scope) {
-  const applicable = state.budgets.filter((b) => scope === "All" || b.scope === scope);
-  return applicable.filter((b) => b.month === month || b.month === "*" && !applicable.some((o) => o.month === month && o.id === b.id));
+  return resolvePlans(state.budgets, month, scope).filter((b) => !b.hidden);
+}
+function resolvePlans(plans, month, scope) {
+  const selected = /* @__PURE__ */ new Map();
+  const priority = (p) => p.month === month ? "2" : p.month.startsWith("from:") ? `1${p.month}` : "0";
+  for (const p of plans) {
+    if (scope !== "All" && p.scope !== scope) continue;
+    if (p.month !== "*" && p.month !== month && !(p.month.startsWith("from:") && p.month.slice(5) <= month)) continue;
+    const previous = selected.get(p.id);
+    if (!previous || (p.revision ?? 0) > (previous.revision ?? 0) || (p.revision ?? 0) === (previous.revision ?? 0) && priority(p) > priority(previous)) selected.set(p.id, p);
+  }
+  return [...selected.values()];
 }
 function scopedTransactions(state, month, scope) {
   return state.transactions.filter((t) => t.date.startsWith(month) && (scope === "All" || (t.type === "Transfer" ? state.accounts.some((a) => (a.id === t.accountId || a.id === t.toAccountId) && a.scope === scope) : t.scope === scope))).sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`) || b.createdAt.localeCompare(a.createdAt));
@@ -339,35 +349,35 @@ function validDate(date) {
 function validateAction(input, state, previous) {
   if (!input || typeof input !== "object") throw new Error("Invalid financial action.");
   const v = input;
-  const text2 = (key, max) => {
+  const text3 = (key, max) => {
     if (typeof v[key] !== "string" || v[key].length > max) throw new Error(`Invalid ${key}.`);
     return v[key].trim();
   };
-  const id = text2("id", 100), title = text2("title", 200), note = text2("note", 4e3);
+  const id = text3("id", 100), title = text3("title", 200), note = text3("note", 4e3);
   if (!/^[a-zA-Z0-9-]{1,100}$/.test(id) || !title) throw new Error("Give your financial action a title.");
   if (previous && (id !== previous.id || v.revision !== previous.revision)) throw new Error("This action has changed. Reload before editing.");
   if (!previous && state.notesReminders.some((a) => a.id === id)) throw new Error("This action already exists.");
-  const category = text2("category", 40), priority = text2("priority", 10), status = text2("status", 20);
+  const category = text3("category", 40), priority = text3("priority", 10), status = text3("status", 20);
   if (!actionCategories.includes(category) || !["Low", "Medium", "High"].includes(priority) || !["Open", "In Progress", "Completed"].includes(status)) throw new Error("Choose a valid category, priority, and status.");
-  const scope = text2("scope", 10);
+  const scope = text3("scope", 10);
   if (!["Personal", "Business"].includes(scope)) throw new Error("Choose Personal or Business.");
-  const relatedExpenseId = text2("relatedExpenseId", 150), relatedAccountId = text2("relatedAccountId", 100);
+  const relatedExpenseId = text3("relatedExpenseId", 150), relatedAccountId = text3("relatedAccountId", 100);
   if (relatedAccountId && !state.accounts.some((a) => a.id === relatedAccountId)) throw new Error("Choose a valid related account.");
   if (relatedExpenseId) {
     const [kind, expenseId] = relatedExpenseId.split(":");
     const expense = kind === "budget" ? state.budgets.find((b) => b.id === expenseId) : kind === "transaction" ? state.transactions.find((t) => t.id === expenseId && t.type === "Expense") : void 0;
     if (!expense || expense.scope !== scope) throw new Error("Choose a related expense in the same money space.");
   }
-  const reminderDate = text2("reminderDate", 10);
+  const reminderDate = text3("reminderDate", 10);
   if (reminderDate && !validDate(reminderDate)) throw new Error("Choose a valid reminder date.");
-  const cents2 = (key, signed = false) => {
+  const cents3 = (key, signed = false) => {
     if (v[key] === null || v[key] === void 0) return null;
     const value = v[key];
     if (!Number.isSafeInteger(value) || Math.abs(value) > 99999999999 || !signed && value < 0) throw new Error("Enter valid amounts in whole cents.");
     return value;
   };
-  const amountAffectedCents = cents2("amountAffectedCents"), previousCostCents = cents2("previousCostCents"), newCostCents = cents2("newCostCents");
-  const monthlySavingsCents = previousCostCents !== null && newCostCents !== null ? previousCostCents - newCostCents : cents2("monthlySavingsCents", true);
+  const amountAffectedCents = cents3("amountAffectedCents"), previousCostCents = cents3("previousCostCents"), newCostCents = cents3("newCostCents");
+  const monthlySavingsCents = previousCostCents !== null && newCostCents !== null ? previousCostCents - newCostCents : cents3("monthlySavingsCents", true);
   const now = (/* @__PURE__ */ new Date()).toISOString();
   return { id, title, note, category, priority, status, scope, relatedExpenseId, relatedAccountId, reminderDate, amountAffectedCents, previousCostCents, newCostCents, monthlySavingsCents, annualizedSavingsCents: monthlySavingsCents === null ? null : monthlySavingsCents * 12, createdAt: previous?.createdAt ?? now, updatedAt: now, completedAt: status === "Completed" ? previous?.status === "Completed" ? previous.completedAt : now : null, revision: (previous?.revision ?? 0) + 1 };
 }
@@ -414,6 +424,8 @@ function validateBackup(input) {
   for (const account of state.accounts) {
     if (!["Checking", "Savings", "Credit card"].includes(account.type) || !["Personal", "Business"].includes(account.scope) || typeof account.name !== "string" || !/^\d{4}$/.test(account.lastFour)) throw new Error("The backup contains an invalid account.");
     if (account.balanceCents !== null && !Number.isSafeInteger(account.balanceCents)) throw new Error("An opening balance is invalid.");
+    if (account.hidden !== void 0 && typeof account.hidden !== "boolean") throw new Error("The backup contains an invalid account visibility.");
+    if (account.revision !== void 0 && (!Number.isSafeInteger(account.revision) || account.revision < 0)) throw new Error("The backup contains an invalid account version.");
     if (account.balanceIncludedTransactionIds) {
       const included = JSON.parse(account.balanceIncludedTransactionIds);
       if (!Array.isArray(included) || included.some((id) => typeof id !== "string")) throw new Error("The opening balance snapshot is invalid.");
@@ -421,8 +433,20 @@ function validateBackup(input) {
   }
   for (const category of state.categories) if (typeof category.name !== "string" || !category.name) throw new Error("The backup contains an invalid category.");
   for (const record of [...state.budgets, ...state.income]) {
-    if (typeof record.label !== "string" || !["Personal", "Business"].includes(record.scope) || !Number.isSafeInteger(record.amountCents) || record.amountCents < 0 || record.month !== "*" && !/^\d{4}-(0[1-9]|1[0-2])$/.test(record.month)) throw new Error("The backup contains an invalid monthly plan.");
+    if (typeof record.label !== "string" || !["Personal", "Business"].includes(record.scope) || !Number.isSafeInteger(record.amountCents) || record.amountCents < 0 || record.month !== "*" && !/^(from:)?\d{4}-(0[1-9]|1[0-2])$/.test(record.month)) throw new Error("The backup contains an invalid monthly plan.");
   }
+  for (const budget of state.budgets) {
+    if (budget.hidden !== void 0 && typeof budget.hidden !== "boolean") throw new Error("The backup contains an invalid budget visibility.");
+    if (budget.dueDay != null && (!Number.isInteger(budget.dueDay) || budget.dueDay < 1 || budget.dueDay > 31)) throw new Error("The backup contains an invalid bill due day.");
+    if (budget.paymentAccountId && !state.accounts.some((a) => a.id === budget.paymentAccountId)) throw new Error("The backup contains an unknown bill account.");
+    if (budget.classification !== void 0 && !["Need", "Want"].includes(budget.classification)) throw new Error("The backup contains an invalid budget classification.");
+    if (budget.aliases !== void 0) {
+      if (typeof budget.aliases !== "string" || budget.aliases.length > 1e4) throw new Error("The backup contains invalid previous budget names.");
+      const names2 = JSON.parse(budget.aliases || "[]");
+      if (!Array.isArray(names2) || names2.some((pair) => !Array.isArray(pair) || pair.length !== 2 || pair.some((value) => typeof value !== "string" || value.length > 100))) throw new Error("The backup contains invalid previous budget names.");
+    }
+  }
+  for (const plan of [...state.budgets, ...state.income]) if (plan.revision !== void 0 && (!Number.isSafeInteger(plan.revision) || plan.revision < 0)) throw new Error("The backup contains an invalid plan version.");
   for (const transaction of state.transactions) {
     validateTransaction(transaction, state, transaction);
     if (!Number.isSafeInteger(transaction.revision) || transaction.revision < 1 || !Number.isFinite(Date.parse(transaction.createdAt)) || !Number.isFinite(Date.parse(transaction.updatedAt))) throw new Error("A transaction has invalid history metadata.");
@@ -555,6 +579,9 @@ function balanceBreakdown(state, account, now = localMinute()) {
   const comparable = account.balanceCents !== null && now >= asOf;
   return { openingCents: account.balanceCents, openingAsOf: asOf, inflows: flows.inflows, outflows: flows.outflows, transactions: eligible.filter((t) => t.accountId === account.id || t.toAccountId === account.id), calculatedCents: comparable ? account.balanceCents + (account.type === "Credit card" ? -change : change) : null };
 }
+function currentBalance(state, account, now = localMinute()) {
+  return balanceBreakdown(state, account, now).calculatedCents;
+}
 var monthOK = (s) => typeof s === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
 function object(input) {
   if (!input || typeof input !== "object") throw new Error("Invalid record.");
@@ -573,8 +600,8 @@ function cents(value, positive = false) {
   return value;
 }
 function validateFunding(input, state) {
-  const v = object(input), budgetId = text(v, "budgetId", 100), month = text(v, "month", 7);
-  if (!state.budgets.some((b) => b.id === budgetId) || month !== "*" && !monthOK(month)) throw new Error("Choose a valid planned expense and month.");
+  const v = object(input), budgetId = text(v, "budgetId", 100), month = text(v, "month", 12);
+  if (!state.budgets.some((b) => b.id === budgetId) || month !== "*" && !monthOK(month.startsWith("from:") ? month.slice(5) : month)) throw new Error("Choose a valid planned expense and month.");
   const id = `funding-${budgetId}-${month === "*" ? "default" : month}`, before = state.expenseFunding.find((f) => f.id === id), paymentAccountId = text(v, "paymentAccountId", 100);
   if (paymentAccountId && !state.accounts.some((a) => a.id === paymentAccountId)) throw new Error("Choose a payment account.");
   if (v.dueDay !== null && (!Number.isInteger(v.dueDay) || Number(v.dueDay) < 1 || Number(v.dueDay) > 31)) throw new Error("Choose a due day between 1 and 31.");
@@ -631,12 +658,12 @@ function validateReconciliation(input, state, now = localMinute()) {
 }
 
 // shared/leaks.ts
-function evidenceKey(text2) {
+function evidenceKey(text3) {
   let hash = 14695981039346656037n;
-  for (const character of text2) hash = BigInt.asUintN(64, (hash ^ BigInt(character.codePointAt(0))) * 1099511628211n);
+  for (const character of text3) hash = BigInt.asUintN(64, (hash ^ BigInt(character.codePointAt(0))) * 1099511628211n);
   return hash.toString(16);
 }
-var normalized = (text2) => text2.trim().toLowerCase().replace(/\s+/g, " ");
+var normalized = (text3) => text3.trim().toLowerCase().replace(/\s+/g, " ");
 function precedingMonths(month) {
   const date = /* @__PURE__ */ new Date(`${month}-15T12:00:00`);
   return [1, 2, 3].map((offset) => {
@@ -717,6 +744,90 @@ function undoEntry(state, id, revision2, now = Date.now()) {
   const restored = previous ? validateTransaction({ ...previous, revision: revision2 }, state, current) : null;
   const stored = restored ?? { ...current, voided: true, revision: revision2 + 1, updatedAt: new Date(now).toISOString() };
   return { current, restored, stored };
+}
+
+// shared/simple.ts
+var visibleAccounts = (state, scope) => state.accounts.filter((a) => !a.hidden && (scope === "All" || a.scope === scope));
+function planPeriod(input) {
+  if (typeof input.startMonth !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(input.startMonth)) throw new Error("Choose a month.");
+  if (!["future", "once"].includes(String(input.applies))) throw new Error("Choose when this change applies.");
+  return input.applies === "once" ? input.startMonth : `from:${input.startMonth}`;
+}
+function cents2(value) {
+  if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 99999999999) throw new Error("Enter a valid amount.");
+  return Number(value);
+}
+function text2(value, max) {
+  if (typeof value !== "string" || !value.trim() || value.length > max) throw new Error("Enter a name.");
+  return value.trim();
+}
+function validateBudgetChange(input, state) {
+  const v = input, month = planPeriod(v), id = text2(v.id, 100);
+  if (!/^[\w-]+$/.test(id)) throw new Error("Invalid item.");
+  const versions = state.budgets.filter((b) => b.id === id), revision2 = Math.max(0, ...versions.map((b) => b.revision ?? 0));
+  if (v.revision !== revision2) throw new Error("This budget changed. Reopen it and try again.");
+  const before = resolvePlans(versions, String(v.startMonth), "All")[0];
+  const scope = v.scope;
+  if (!["Personal", "Business"].includes(scope) || before && scope !== before.scope) throw new Error("Choose Personal or Business.");
+  const label = text2(v.label, 100), category = text2(v.category, 100);
+  if (!state.categories.some((c) => c.name === category)) throw new Error("Choose a category.");
+  if (v.dueDay !== null && (!Number.isInteger(v.dueDay) || Number(v.dueDay) < 1 || Number(v.dueDay) > 31)) throw new Error("Choose a due day from 1 to 31.");
+  const paymentAccountId = String(v.paymentAccountId || "");
+  if (paymentAccountId && !state.accounts.some((a) => a.id === paymentAccountId && !a.hidden)) throw new Error("Choose a payment account.");
+  if (!["Need", "Want"].includes(String(v.classification))) throw new Error("Choose Need or Want.");
+  const aliases = before ? JSON.parse(before.aliases || "[]") : [];
+  if (before && (before.label !== label || before.category !== category)) aliases.push([before.category, before.label]);
+  if (JSON.stringify(aliases).length > 1e4) throw new Error("This item has too many previous names.");
+  return { id, month, scope, label, category, amountCents: cents2(v.amountCents), dueDay: v.dueDay, paymentAccountId, classification: v.classification, hidden: v.hidden === true, aliases: JSON.stringify(aliases), revision: revision2 + 1 };
+}
+function validateIncomeChange(input, state) {
+  const v = input, month = planPeriod(v), scope = v.scope;
+  if (!["Personal", "Business"].includes(scope)) throw new Error("Choose Personal or Business.");
+  const id = String(v.id), previous = state.income.filter((i) => i.id === id), revision2 = Math.max(0, ...previous.map((i) => i.revision ?? 0));
+  if (!/^[\w-]{1,100}$/.test(id) || previous.some((i) => i.scope !== scope) || v.revision !== revision2) throw new Error("This income plan changed. Reopen it.");
+  return { id, scope, month, label: "Expected income", amountCents: cents2(v.amountCents), revision: revision2 + 1 };
+}
+function validateAccountChange(input, state) {
+  const v = input, before = state.accounts.find((a) => a.id === v.id);
+  if (!/^[\w-]{1,100}$/.test(String(v.id)) || v.revision !== (before?.revision ?? 0)) throw new Error("This account changed. Reopen it.");
+  if (!["Personal", "Business"].includes(String(v.scope)) || !["Checking", "Savings", "Credit card"].includes(String(v.type)) || !/^\d{4}$/.test(String(v.lastFour))) throw new Error("Choose an account type and enter its last four digits.");
+  if (before && (before.balanceCents !== null || state.transactions.some((t) => t.accountId === before.id || t.toAccountId === before.id)) && (v.type !== before.type || v.scope !== before.scope)) throw new Error("Keep the type and owner of an account with recorded money.");
+  if (v.hidden && before && currentBalance(state, before) !== null && currentBalance(state, before) !== 0) throw new Error("Move or settle this account\u2019s balance before hiding it.");
+  return { ...before ?? { balanceCents: null, balanceUpdatedAt: null }, id: String(v.id), name: text2(v.name, 100), lastFour: String(v.lastFour), scope: v.scope, type: v.type, hidden: v.hidden === true, revision: (before?.revision ?? 0) + 1 };
+}
+function removeEntry(state, id, revision2) {
+  const before = state.transactions.find((t) => t.id === id);
+  if (!before || before.revision !== revision2 || before.voided) throw new Error("This entry changed. Reopen it before removing it.");
+  return { ...before, voided: true, revision: revision2 + 1, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+}
+function accountChecked(state, account, now = localMinute()) {
+  return state.balanceReconciliations.some((r) => r.accountId === account.id && r.asOf.slice(0, 10) === now.slice(0, 10) && r.differenceCents === 0 && r.ledgerFingerprint === reconciliationFingerprint(state, account, now));
+}
+function bankObservationNow(timezoneOffset, timestamp = Date.now()) {
+  if (!Number.isInteger(timezoneOffset) || Math.abs(timezoneOffset) > 840) throw new Error("Invalid device time zone.");
+  return new Date(timestamp - timezoneOffset * 6e4).toISOString().slice(0, 16);
+}
+function bankCheck(input, state, now) {
+  const v = input, account = state.accounts.find((a) => a.id === v.accountId && !a.hidden);
+  if (!account) throw new Error("Choose an account.");
+  const observedNow = now ?? (v.timezoneOffset !== void 0 ? bankObservationNow(v.timezoneOffset) : localMinute());
+  const asOf = typeof v.asOf === "string" ? v.asOf : observedNow;
+  const comparison = validateReconciliation({ ...v, asOf, note: v.fix ? "Bank is right, fix balance" : "Check my bank" }, state, observedNow);
+  let accounts = [], records = [comparison];
+  if (v.fix === true) {
+    const after = { ...account, balanceCents: comparison.actualBalanceCents, balanceAsOf: asOf, balanceUpdatedAt: comparison.updatedAt, balanceIncludedTransactionIds: balanceSnapshotIds(state.transactions, asOf) };
+    accounts = [after];
+    const next2 = { ...state, accounts: state.accounts.map((a) => a.id === after.id ? after : a) };
+    records.push(validateReconciliation({ ...v, id: `${comparison.id}-fixed`, asOf, note: "Balance corrected", ledgerFingerprint: reconciliationFingerprint(next2, after, asOf) }, next2, observedNow));
+  } else if (comparison.differenceCents !== 0) throw new Error("The balances differ. Add a missing entry or choose Bank is right, fix balance.");
+  const next = { ...state, accounts: state.accounts.map((a) => accounts.find((b) => b.id === a.id) ?? a), balanceReconciliations: [...state.balanceReconciliations, ...records] };
+  const checks = ["Personal", "Business", "All"].flatMap((scope) => {
+    const relevant = visibleAccounts(next, scope);
+    if (!relevant.length || !relevant.every((a) => accountChecked(next, a, asOf))) return [];
+    const date = asOf.slice(0, 10), previous = next.dailyCheckIns.find((c) => c.date === date && c.scope === scope);
+    return [validateCheckIn({ date, scope, revision: previous?.revision ?? 0, transactionFingerprint: transactionFingerprint(next, date, scope) }, next)];
+  });
+  return { accounts, balanceReconciliations: records, dailyCheckIns: checks };
 }
 
 // server/app.ts
@@ -854,6 +965,29 @@ function createApp({ hosted = process.env.VERCEL === "1" } = {}) {
     res.json(await exportSnapshot(await readState2()));
   });
   app.get("/api/state", async (_req, res) => res.json(await readState2()));
+  const planChanges = { "budget-items": { table: "budgets", validate: validateBudgetChange }, "planned-income": { table: "income", validate: validateIncomeChange }, "account-details": { table: "accounts", validate: validateAccountChange } };
+  for (const [route, change] of Object.entries(planChanges)) app.post(`/api/${route}`, async (req, res) => {
+    res.json(await mutate2(async () => {
+      const state = await readState2(), after = change.validate(req.body, state);
+      const before = state[change.table].filter((r) => r.id === after.id);
+      await writeRecords2([{ table: change.table, records: [after] }, { table: "audit", records: [{ id: randomUUID(), entity: route, entityId: after.id, at: (/* @__PURE__ */ new Date()).toISOString(), before, after }] }]);
+      return after;
+    }));
+  });
+  app.post("/api/bank-check", async (req, res) => {
+    res.json(await mutate2(async () => {
+      const state = await readState2(), result = bankCheck(req.body, state);
+      await writeRecords2([{ table: "accounts", records: result.accounts }, { table: "balanceReconciliations", records: result.balanceReconciliations }, { table: "dailyCheckIns", records: result.dailyCheckIns }, { table: "audit", records: [{ id: randomUUID(), entity: "bank check", entityId: String(req.body.accountId), at: (/* @__PURE__ */ new Date()).toISOString(), before: state.accounts.find((a) => a.id === req.body.accountId), after: result }] }]);
+      return result;
+    }));
+  });
+  app.post("/api/transactions/:id/remove", async (req, res) => {
+    res.json(await mutate2(async () => {
+      const state = await readState2(), after = removeEntry(state, String(req.params.id), req.body.revision);
+      await writeRecords2([{ table: "transactions", records: [after] }, { table: "audit", records: [{ id: randomUUID(), entity: "entry removed", entityId: after.id, at: after.updatedAt, before: state.transactions.find((t) => t.id === after.id), after }] }]);
+      return after;
+    }));
+  });
   app.post("/api/transactions", async (req, res) => {
     const result = await mutate2(async () => {
       const state = await readState2(true);

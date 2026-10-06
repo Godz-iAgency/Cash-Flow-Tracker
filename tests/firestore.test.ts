@@ -5,7 +5,9 @@ import { FirestoreStore, documentId } from '../server/firestore';
 import { requireOwner } from '../server/firebase';
 import { initialState } from '../shared/seed';
 import { stateTables, validateBackup } from '../shared/backup';
-import { validateTransaction } from '../shared/model';
+import { monthBudgets, validateTransaction } from '../shared/model';
+import { bankCheck, removeEntry, validateBudgetChange } from '../shared/simple';
+import { reconciliationFingerprint } from '../shared/reconciliation';
 import { undoEntry } from '../shared/undo';
 
 // A transactional driver: staged writes commit together, thrown operations roll
@@ -111,4 +113,33 @@ test('backup validation rejects corrupt cents, duplicates and oversized imports 
   assert.throws(() => validateBackup(duplicate), /Duplicate/);
   const large = structuredClone(source); large.audit = Array.from({ length: 401 }, (_, i) => ({ id: String(i), entity: 'transaction', entityId: String(i), at: '2026-10-04T00:00:00Z', before: null, after: null }));
   assert.throws(() => validateBackup(large), /400 records/);
+});
+
+
+test('Firestore round-trips budget versions, bank corrections and removed entries with their audit', async () => {
+  const driver = new TransactionalDatabase(), store = new FirestoreStore(driver as unknown as Firestore, 'owner');
+  const source = initialState(); await store.initialize(source);
+  const change = await store.mutate(async () => {
+    const state = await store.readState(), before = state.budgets[0];
+    const after = validateBudgetChange({ ...before, startMonth: '2026-10', applies: 'future', amountCents: 100000, revision: 0, dueDay: 1, paymentAccountId: source.accounts[0].id, classification: 'Need' }, state);
+    await store.writeRecords([{ table: 'budgets', records: [after] }, { table: 'audit', records: [{id:'plan-change', entity:'budget-items', entityId:after.id, at:'2026-10-05T12:00:00Z', before, after}] }]); return after;
+  });
+  let state = await store.readState();
+  assert.equal(state.budgets.length, source.budgets.length + 1);
+  assert.equal(monthBudgets(state, '2026-09', 'Personal').find(b => b.id === change.id)!.amountCents, source.budgets[0].amountCents);
+  assert.equal(monthBudgets(state, '2026-11', 'Personal').find(b => b.id === change.id)!.amountCents, 100000);
+  const now = '2026-10-05T12:00';
+  await store.mutate(async () => {
+    const state = await store.readState(), account = state.accounts[0];
+    const result = bankCheck({ id:'new-bank', accountId:account.id, actualBalanceCents:10000, fix:true, ledgerFingerprint:reconciliationFingerprint(state, account, now) }, state, now);
+    await store.writeRecords([{table:'accounts', records:result.accounts}, {table:'balanceReconciliations', records:result.balanceReconciliations}, {table:'dailyCheckIns', records:result.dailyCheckIns}, {table:'audit', records:[{id:'bank-audit', entity:'bank check', entityId:account.id, at:'2026-10-05T12:00:00Z', before:account, after:result}]}]);
+  });
+  state = await store.readState(); assert.equal(state.accounts[0].balanceCents, 10000); assert.equal(state.balanceReconciliations.length, 2); assert.equal(state.balanceReconciliations.find(r=>r.id==='new-bank-fixed')!.differenceCents, 0);
+  const entry = validateTransaction({id:'later-spend', type:'Expense', amountCents:5, date:'2026-10-05', time:'12:01', category:'Food', subcategory:'Grocery', accountId:state.accounts[0].id, scope:'Personal', classification:'Need', merchant:'Store', description:'', notes:''}, state);
+  await store.mutate(()=>store.writeRecords([{table:'transactions', records:[entry]}]));
+  await store.mutate(async()=> {
+    const state=await store.readState(), after=removeEntry(state, entry.id, entry.revision);
+    await store.writeRecords([{table:'transactions', records:[after]}, {table:'audit', records:[{id:'remove-audit', entity:'entry removed', entityId:entry.id, at:after.updatedAt, before:entry, after}]}]);
+  });
+  assert.equal((await store.readState()).transactions.length, 0); assert.equal((await store.readState(true)).transactions[0].voided, true); assert.equal((await store.readState()).audit.length, 3);
 });

@@ -23,7 +23,7 @@ export function Modal({ title, subtitle, children, onClose, wide = false }: { ti
     function handle(event: KeyboardEvent) {
       if (event.key === 'Escape') close.current();
       if (event.key === 'Tab') {
-        const elements = [...(ref.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]') ?? [])];
+        const elements = [...(ref.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"], summary') ?? [])].filter(el => el.tabIndex >= 0 && el.getClientRects().length > 0);
         const first = elements[0], last = elements[elements.length - 1];
         if (event.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) { event.preventDefault(); last?.focus(); }
         else if (!event.shiftKey && (document.activeElement === last || document.activeElement === ref.current)) { event.preventDefault(); first?.focus(); }
