@@ -9,7 +9,7 @@ import { friendlyError } from './words';
 function guardSaveClickThrough(rect: DOMRect) {
   const stop = (event: MouseEvent) => {
     const target = event.target as Element | null;
-    if (target?.closest('main, .sidebar, .mobile-nav, .mobile-add') && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+    if (event.detail > 1 && target?.closest('main, .sidebar, .mobile-nav, .mobile-add') && event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
       event.preventDefault(); event.stopImmediatePropagation();
     }
   };

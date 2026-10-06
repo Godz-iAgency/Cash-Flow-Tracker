@@ -9,7 +9,7 @@ Final project assets:
 
 The generated PNGs were encoded as WebP at quality 82 for delivery. The two static assets total about 390 KiB; the second loads only when its first card is needed. No animation, video, blur filter, image JavaScript, or per-frame work is involved.
 
-Photo text lives on a 96% pale backplate. Ink, soft text and links pass normal-text contrast even against the darkest and brightest possible image pixels. Increased contrast or reduced transparency makes the backplate opaque.
+Photo text lives on a 96% dark backplate. Ink, soft text and links pass normal-text contrast even against the darkest and brightest possible image pixels. Increased contrast or reduced transparency makes the backplate opaque.
 
 ## Final prompts
 

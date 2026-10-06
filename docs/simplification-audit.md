@@ -87,3 +87,18 @@ No live financial records were changed. Browser tests use synthetic records; pre
 - Home, Income, Expenses, Cash flow, Advanced and Add were captured at 320, 390, 768 and 1440 pixels. The final phone/desktop gallery is `.local/clear-water/gallery.html`; the phone contact sheet is `.local/clear-water/gallery.png`. Home, Income, Expenses and Cash flow were also inspected at 320 pixels with 200% text.
 
 Review the sample-data preview by adding a payment from Income, opening Paid beside a bill and saving or cancelling, moving money between two accounts, and expanding Banks & cards or the Advanced ledger. Check installation and scrolling on the actual phone before live publication.
+
+
+## Dark theme and preview accuracy — 2026-10-06
+
+The latest user request replaces the light appearance with one dark appearance. Crystal-water photos remain, with a 96% dark text backplate and an opaque fallback for increased contrast or reduced transparency.
+
+The previous design preview used invented transactions and balances. These were separate from the signed-in tracker, but its notice appeared only in Advanced and was insufficiently clear. The application no longer imports these examples. Test-only fixtures now live in `tests/browser/reviewFixture.ts`, outside the client bundle. Preview starts with only the supplied plan/account list, no received income, no purchase entries and null bank balances. Every page has an explicit Preview only notice and a link to the real tracker. A separate versioned preview-storage key leaves both older preview data and actual on-device data intact. Preview downloads use the cash-flow-preview prefix and identify preview records.
+
+Normal signed-in mode still reads the saved server state; it does not seed example transactions. The storage notice says Saved online only after that read succeeds, or Saved on this device for local mode. A mocked authenticated Firestore-response test verifies that only returned records appear, even when device storage holds old test examples. The preview test verifies no API requests, no invented entries/balances, original expense labels, independent typed preview entries, persistent labels on every page and a distinct download filename.
+
+The production status endpoint returned HTTP 200 with configured=true, backend=firestore, projectId=cash-flow-tracker-59ac6 and sheetsExportEnabled=true. The normal live page presented Google sign-in in the available browser. This verifies deployed configuration and authentication UI, not private authenticated financial reads; no real financial records were read or changed.
+
+The production build and type checks passed. The complete 104-case browser run passed 100 cases; four tests needed their old sample-balance assumptions updated. The final targeted seven-case run passed the corrected empty-balance editor and bank-check cases. All 104 unique cases are covered on the final application sources, with no remaining failures. Dark contrast, 320–1920 pixel layouts, 200% text, receipt entry, transfers, duplicate saves/Undo, preview accuracy, mocked online loading, backups, PWA privacy, reduced motion and still Add are covered. The previous 68 financial/security unit checks remain the baseline; shared calculation and persistence code did not change.
+
+In the simulated 390-pixel phone check with 4x CPU throttling, both baseline and one-shot ripple scrolling had a 17.0 ms 95th-percentile interval. About 0.14% of frames exceeded 50 ms in both runs, within the limits. This is simulation, not a physical-device guarantee. The dark screenshot gallery is `.local/clear-water/gallery.html`.

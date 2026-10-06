@@ -89,11 +89,11 @@ test('water image text passes contrast against the darkest and brightest possibl
   const ratios = await page.evaluate(() => {
     const linear = (n: number) => { n /= 255; return n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; };
     const lum = (c: number[]) => c.reduce((n, v, i) => n + linear(v) * [.2126, .7152, .0722][i], 0);
-    const dark = [249, 253, 251].map(n => n * .96), bright = [249, 253, 251].map(n => n * .96 + 255 * .04);
-    return [[20, 46, 45], [72, 98, 95], [20, 92, 87]].flatMap(color => [dark, bright].map(bg => (lum(bg) + .05) / (lum(color) + .05)));
+    const dark = [10, 27, 30].map(n => n * .96), bright = [10, 27, 30].map(n => n * .96 + 255 * .04);
+    return [[231, 244, 241], [162, 185, 182], [166, 228, 223]].flatMap(color => [dark, bright].map(bg => (lum(color) + .05) / (lum(bg) + .05)));
   });
   expect(Math.min(...ratios)).toBeGreaterThanOrEqual(4.5);
   for (const name of ['Home', 'Income', 'Expenses', 'Cash flow']) {
-    await go(page, name); await expect(page.locator('.water-copy').first()).toHaveCSS('background-color', 'rgba(249, 253, 251, 0.96)');
+    await go(page, name); await expect(page.locator('.water-copy').first()).toHaveCSS('background-color', 'rgba(10, 27, 30, 0.96)');
   }
 });

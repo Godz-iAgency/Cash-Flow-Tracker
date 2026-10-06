@@ -2,7 +2,7 @@ import { navigateTest } from './helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { initialState } from '../../shared/seed';
-import { waterPreviewState } from '../../shared/waterPreview';
+import { waterPreviewState } from './reviewFixture';
 import { localDate } from '../../shared/model';
 import { contrastAudit } from './water-contrast';
 async function nav(page: any, name: string) { await navigateTest(page, name); }

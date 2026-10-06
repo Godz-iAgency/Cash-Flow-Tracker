@@ -1,7 +1,7 @@
 import { navigateTest } from './helpers';
 import { test, expect } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { waterPreviewState } from '../../shared/waterPreview';
+import { waterPreviewState } from './reviewFixture';
 import { openMore } from './helpers';
 test.beforeEach(async ({ page }) => { await page.addInitScript(state => { if (!localStorage.getItem('cash-flow-tracker-v1')) localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(state)); }, waterPreviewState()); });
 test('one appearance ignores old mode preferences without modifying financial records; preview makes no cloud requests', async ({ page }) => {

@@ -14,17 +14,17 @@ test('the common entry path stays short, keyboard focus stays in the task, and o
   await expect(page.getByRole('dialog')).toBeHidden(); expect(await page.locator('.sidebar').evaluate(el => (el as HTMLElement).inert)).toBe(false);
   await nav(page, 'More'); await page.getByText('More tools', {exact:true}).click(); await page.getByText('Past changes & other tools',{exact:true}).click(); await nav(page, 'Change history');
   const dialog = page.getByRole('dialog'); await dialog.locator('.audit-list > details > summary').first().click(); await expect(dialog).toContainText('$0.05'); await expect(dialog.locator('pre').first()).toBeHidden();
-  const before = await page.evaluate(() => localStorage.getItem('cash-flow-water-preview'));
+  const before = await page.evaluate(() => localStorage.getItem('cash-flow-plan-preview-v2'));
   await dialog.locator('.original-record > summary').first().click(); await expect(dialog.locator('pre').last()).toContainText('amountCents'); await page.keyboard.press('Escape');
-  expect(await page.evaluate(() => localStorage.getItem('cash-flow-water-preview'))).toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem('cash-flow-plan-preview-v2'))).toBe(before);
 });
 
 test('an invalid bill day opens its hidden field and keeps the financial plan intact', async ({ page }) => {
   await page.goto('/?preview=simple'); await nav(page, 'Plan'); await nav(page, 'Add item');
-  const before = await page.evaluate(() => localStorage.getItem('cash-flow-water-preview'));
+  const before = await page.evaluate(() => localStorage.getItem('cash-flow-plan-preview-v2'));
   await page.getByLabel('Name', { exact: true }).fill('New bill'); await page.getByLabel('Monthly amount', { exact: true }).fill('10'); await page.getByText('Bill details', { exact: true }).click(); await page.getByLabel('Due day (optional)').fill('32'); await page.getByText('Bill details', { exact: true }).click(); await nav(page, 'Save');
   await expect(page.getByLabel('Due day (optional)')).toBeVisible(); await expect(page.getByLabel('Due day (optional)')).toBeFocused();
-  expect(await page.evaluate(() => localStorage.getItem('cash-flow-water-preview'))).toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem('cash-flow-plan-preview-v2'))).toBe(before);
 });
 
 test('income breakdown follows Personal and Business and extra reports start collapsed', async ({ page }) => {
@@ -80,6 +80,6 @@ test('a purchase outside the plan keeps the words I type without requiring more 
   await page.getByRole('combobox', { name: 'What for' }).fill('Pizza with a friend'); await page.keyboard.press('Tab');
   await expect(page.getByRole('combobox', { name: 'What for' })).toHaveValue('Pizza with a friend'); await nav(page, 'Save');
   await expect(page.getByRole('dialog')).toBeHidden(); await expect(page.locator('.entry-row').filter({ hasText: 'Pizza with a friend' })).toBeVisible();
-  const entry = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-water-preview')!).transactions.find((t: any) => t.merchant === 'Pizza with a friend'));
+  const entry = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-plan-preview-v2')!).transactions.find((t: any) => t.merchant === 'Pizza with a friend'));
   expect(entry.amountCents).toBe(750); expect(entry.subcategory).toBe('Pizza with a friend'); expect(entry.type).toBe('Expense');
 });

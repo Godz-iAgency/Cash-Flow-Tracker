@@ -40,7 +40,7 @@ Personal / Business / All stays available across the app. Phones have five botto
 
 ## Clear-water appearance
 
-There is one appearance on every device. Compressed, generated crystal-water photographs sit behind selected cards, with a pale backplate for readable text. The original logo stays intact. Colors live in `src/water-tokens.css`; no light/dark preference is required. The photos stay still. Reduced motion removes the one-time page fade and save ripple, and Add has no decorative animation. See [the design and asset guide](docs/water-theme.md).
+There is one dark appearance on every device. Compressed, generated crystal-water photographs sit behind selected cards, with a dark backplate for readable text. The original logo stays intact. Colors live in `src/water-tokens.css`; no light/dark preference is required. The photos stay still. Reduced motion removes the one-time page fade and save ripple, and Add has no decorative animation. See [the design and asset guide](docs/water-theme.md).
 
 ## Source data and assumptions
 
@@ -203,3 +203,6 @@ Body text and primary controls use 16px at default settings, supporting details 
 Pages support native wheel, trackpad and touch scrolling. Dialogs keep the close button visible above a scrollable content region with wheel, touch and keyboard support. The page lock follows the dialog's presence and disappears when it closes. **More → Backup & devices** includes **Download backup**, reporting exports and audit history. Enlarged-text bottom navigation can scroll horizontally. Reload the app after updating to load the current files. In desktop device emulators, use the wheel/trackpad inside the page; mouse dragging depends on the emulator's gesture controls.
 
 See the [guided Google Sheets setup](docs/google-sheets-setup.md) to connect the existing database integration. Export a backup first: on-device entries do not automatically migrate when Sheets is enabled. Keep downloaded service account credentials outside the repository and provide their local path instead of pasting secret contents.
+
+
+Design preview (`?preview=simple`) is separate from signed-in storage. A notice on every preview page links to the normal live tracker. Preview starts with the supplied expense/account list and no invented purchases, received income or opening balances. Test fixtures stay in test files. Normal signed-in mode loads the saved server records and identifies online storage; on-device mode identifies device storage.

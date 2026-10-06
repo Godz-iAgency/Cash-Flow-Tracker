@@ -405,5 +405,10 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .toast { bottom: calc(9rem + env(safe-area-inset-bottom, 0px)); }
   .mobile-nav button { min-width: 0; width: 100%; font-size: .75rem; overflow-wrap: anywhere; }
 }
-@media (prefers-contrast: more), (prefers-reduced-transparency: reduce) { .water-copy { background: #F9FDFB; } }
+@media (prefers-contrast: more), (prefers-reduced-transparency: reduce) { .water-copy { background: var(--water-solid); } }
 @media print { .water-photo { background-image: none; } .water-copy { background: var(--surface); } }
+
+.storage-notice { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; padding: 10px 0; margin-bottom: 14px; color: var(--muted); font-size: .875rem; }
+.preview-notice { border: 1px solid var(--border); border-radius: 12px; background: var(--raised); padding: 12px 16px; }
+.preview-notice strong { color: var(--text); }
+.preview-notice a { display: inline-flex; align-items: center; gap: 8px; color: var(--link); min-height: 44px; }
