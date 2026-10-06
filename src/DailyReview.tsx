@@ -1,3 +1,4 @@
+import { friendlyError } from './words';
 import { useEffect, useState } from 'react';
 import { CalendarDays, ClipboardCheck, Check } from 'lucide-react';
 import { localDate, money, type State } from '../shared/model';
@@ -8,7 +9,7 @@ import { monthLabel } from './components';
 export type ConfirmDay = (input: Pick<DailyCheckIn, 'date' | 'scope' | 'revision' | 'transactionFingerprint'>) => Promise<void>;
 function Confirmation({ state, date, today, onConfirm, onReview }: { state: State; date: string; today: string; onConfirm: ConfirmDay; onReview: (date: string) => void }) {
   const status = checkInStatus(state, date), [busy, setBusy] = useState(false), [error, setError] = useState('');
-  async function confirm() { setBusy(true); setError(''); try { await onConfirm({ date, scope: 'All', revision: status.record?.revision ?? 0, transactionFingerprint: transactionFingerprint(state, date, 'All') }); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
+  async function confirm() { setBusy(true); setError(''); try { await onConfirm({ date, scope: 'All', revision: status.record?.revision ?? 0, transactionFingerprint: transactionFingerprint(state, date, 'All') }); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); } }
   return <><div className="check-in-buttons"><button className="button secondary" onClick={() => onReview(date)}>{date === today ? 'Review Today' : 'Review Transactions'}</button><button className="button primary" disabled={busy || status.complete || date > today} onClick={() => void confirm()}><Check size={16} />{busy ? 'Saving…' : status.complete ? 'Complete' : 'Confirm entries'}</button></div>{status.changed && <p className="panel-note">{date === today ? 'Today’s' : 'This day’s'} entries changed after confirmation. Review and confirm this day again.</p>}{error && <p className="form-error" role="alert">{error}</p>}</>;
 }
 export function DailyCheckIn({ state, today, onConfirm, onReview }: { state: State; today: string; onConfirm: ConfirmDay; onReview: (date: string) => void }) {

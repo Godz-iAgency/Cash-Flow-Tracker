@@ -53,7 +53,7 @@ test('a new version waits while a financial draft is open and updates only on re
   await page.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting));
   await expect(form.getByRole('combobox', { name: 'What for' })).toHaveValue('Unsaved draft'); expect(await page.evaluate(() => localStorage.getItem('cash-flow-tracker-v1'))).toBe(before);
   await form.getByRole('button', {name:'Close dialog'}).click();
-  await page.getByRole('button', { name: 'Advanced', exact: true }).click(); await page.getByRole('button', { name: 'Update app', exact: true }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click(); await page.getByRole('button', { name: 'Update app', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
   await page.waitForFunction(async () => !(await navigator.serviceWorker.getRegistration())?.waiting);
   expect(await page.evaluate(() => localStorage.getItem('cash-flow-tracker-v1'))).toBe(before);

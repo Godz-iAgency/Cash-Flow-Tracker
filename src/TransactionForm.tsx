@@ -1,3 +1,4 @@
+import { friendlyError } from './words';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CalendarDays, Check, LoaderCircle, ShieldCheck, Sparkles } from 'lucide-react';
 import { localDate, parseCents, validateTransaction, type State, type Transaction, type TransactionType, type Scope } from '../shared/model';
@@ -46,7 +47,7 @@ export default function TransactionForm({ state, edit, initialType = 'Expense', 
       if (typeof result.time === 'string' && /^\d{2}:\d{2}$/.test(result.time)) setTime(result.time);
       setReview(`Review every field before saving.${Array.isArray(result.uncertainties) && result.uncertainties.length ? ` Please confirm: ${result.uncertainties.map(String).join(', ')}.` : ''}`);
       setAiOpen(false); setDetails(true);
-    } catch (e) { setError((e as Error).message); } finally { setAiBusy(false); }
+    } catch (e) { setError(friendlyError(e)); } finally { setAiBusy(false); }
   }
   async function submit(event: FormEvent) {
     if (saveLock.current) { event.preventDefault(); return; }
@@ -59,7 +60,7 @@ export default function TransactionForm({ state, edit, initialType = 'Expense', 
       await onSave(edit ? { ...transaction, revision: edit.revision } : transaction);
       onClose();
       if (rect) window.dispatchEvent(new CustomEvent('cash-flow-saved', { detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } }));
-    } catch (e) { setError((e as Error).message); } finally { saveLock.current = false; setSaving(false); }
+    } catch (e) { setError(friendlyError(e)); } finally { saveLock.current = false; setSaving(false); }
   }
   return <Modal title={edit ? 'Edit transaction' : 'Add a transaction'} subtitle={edit ? 'Previous versions remain in audit history.' : undefined} onClose={onClose}>
     <form onSubmit={submit} className="transaction-form">

@@ -30,17 +30,17 @@ Open http://localhost:3001. No financial credentials are bundled in the frontend
 
 ## Screens and responsive behavior
 
-- **Home:** known cash, smaller card debt, quick Spent / Got paid / Move money actions, this month's budget, today's editable entries and Check my bank.
-- **Activity:** newest entries grouped by day, search and type filters; tap an entry to edit or remove it with preserved history.
-- **Budget:** expected income, budget total and left after budget, followed by a compact category list. Expand an item to see its spending, edit it or record a bill payment. Changes apply forward or to one month.
-- **Accounts:** cash and card debt, collapsible account groups, account movements and a guided bank check. Hidden accounts keep their earlier entries.
-- **Advanced:** spending insights, charts, money flow, history, notes/reminders, month-end review, settings, storage/backup, appearance and installation.
+- **Home:** Money I have, I owe on cards, I spent / I got paid / Move money, this month's spending, today's entries and Check my bank.
+- **History:** entries grouped by day; find, filter, edit or remove an entry while keeping its saved history.
+- **Plan:** Plan to spend, Spent so far and Left to spend. Open a group or item to see details, edit it or record a bill payment. Expected income opens under Money coming in.
+- **My money:** banks and cards in collapsible groups, movements and a guided bank check. Missing amounts invite Add bank balance.
+- **More:** settings, Backup & devices, appearance and installation. Advanced opens deeper reports, reminders, change history and other tools.
 
 The same Personal / Business / All choice persists across the five tabs. Phones have bottom navigation and a persistent Add entry button. Tablets and desktops have a sidebar. Forms become bottom sheets on phones, with amount focused and optional details under More options. Layouts respect safe areas, keyboard focus, larger text, reduced motion and reduced transparency. Money displays two decimal places. See [the simplification and verification audit](docs/simplification-audit.md).
 
 ## Water appearance
 
-The calm navy and aqua theme defaults to dark. Choose **Advanced → Appearance → Light** for the optional light version. All colors are centralized in `src/water-tokens.css`. The original logo and financial accounting rules remain intact; the daily screens use compact, interactive lists. See [the water appearance guide](docs/water-theme.md) for motion, save Undo, contrast verification and the isolated sample preview.
+The calm navy and aqua theme defaults to dark. Choose **More → Appearance → Light** for the optional light version. All colors are centralized in `src/water-tokens.css`. The original logo and financial accounting rules remain intact; the daily screens use compact, interactive lists. See [the water appearance guide](docs/water-theme.md) for motion, save Undo, contrast verification and the isolated sample preview.
 
 ## Source data and assumptions
 
@@ -190,7 +190,7 @@ The only additional table is `Balance_Reconciliations`, with immutable observati
 
 ## Mobile design
 
-The tracker uses the supplied reference's dark surfaces, rounded cards, green balance panel and gold accents. The dashboard shows current checking/savings cash and quick entry for expenses, income and transfers; credit-card balances stay separate and unknown balances remain explicitly unknown. Touch controls, scrollable filters, bottom navigation and sticky transaction actions support small screens. The floating add button returns when scrolling past the dashboard shortcuts.
+The tracker uses the water palette, quiet surfaces, compact rows and rounded controls. The dashboard shows current checking/savings cash and quick entry for expenses, income and transfers; credit-card balances stay separate and unknown balances remain explicitly unknown. Touch controls, scrollable filters, bottom navigation and sticky transaction actions support small screens. The floating add button returns when scrolling past the dashboard shortcuts.
 
 Financial records, calculations and the Google Sheets schema are unchanged. See the [mobile design report](docs/mobile-design.md) for the changed files, validation and remaining device-testing limitations.
 
@@ -200,6 +200,6 @@ Body text and primary controls use 16px at default settings, supporting details 
 
 ## Scrolling and guided Sheets setup
 
-Pages support native wheel, trackpad and touch scrolling. Dialogs keep the close button visible above a scrollable content region with wheel, touch and keyboard support. The page lock follows the dialog's presence and disappears when it closes. **More → Storage & backup** includes **Export full backup**, reporting exports and audit history. Enlarged-text bottom navigation can scroll horizontally. Reload the app after updating to load the current files. In desktop device emulators, use the wheel/trackpad inside the page; mouse dragging depends on the emulator's gesture controls.
+Pages support native wheel, trackpad and touch scrolling. Dialogs keep the close button visible above a scrollable content region with wheel, touch and keyboard support. The page lock follows the dialog's presence and disappears when it closes. **More → Backup & devices** includes **Download backup**, reporting exports and audit history. Enlarged-text bottom navigation can scroll horizontally. Reload the app after updating to load the current files. In desktop device emulators, use the wheel/trackpad inside the page; mouse dragging depends on the emulator's gesture controls.
 
 See the [guided Google Sheets setup](docs/google-sheets-setup.md) to connect the existing database integration. Export a backup first: on-device entries do not automatically migrate when Sheets is enabled. Keep downloaded service account credentials outside the repository and provide their local path instead of pasting secret contents.

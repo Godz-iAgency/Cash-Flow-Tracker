@@ -249,3 +249,85 @@ button:active, summary:active { background-color: var(--hover); }
   .mobile-add { bottom: calc(5.5rem + env(safe-area-inset-bottom,0px)); }
   .main-content { padding-bottom: calc(10rem + env(safe-area-inset-bottom,0px)); }
 }
+
+
+/* Common tasks first; optional choices live one level deeper. */
+.tool-group { margin: 0 0 2rem; }
+.tool-group h2 { color: var(--muted); font-size: .875rem; font-weight: 500; margin: 0 0 .75rem; }
+.tool-group .more-links { border: 1px solid var(--border); border-radius: 18px; background: var(--surface); overflow: hidden; padding: 0; margin: 0; }
+.tool-group .more-links button { min-height: 3.5rem; padding: 1rem; border-bottom: 1px solid var(--border); width: 100%; text-align: left; gap: 1rem; }
+.tool-group .more-links button:last-child { border-bottom: 0; }
+.tool-group .more-links button > span { min-width: 0; flex: 1; }
+.tool-group .more-links button strong { display: block; color: var(--text); font-size: .9375rem; font-weight: 550; }
+.tool-group .more-links button small { display: block; color: var(--muted); font-size: .875rem; margin-top: .25rem; }
+.tool-group .more-links button svg { color: var(--link); }
+.tool-group .appearance-setting { border: 0; padding: 1rem 0 0; margin: 0; }
+.tool-group .more-install { border: 0; padding: 1rem 0 0; margin: 0; }
+.plain-disclosure { border-top: 1px solid var(--border); margin-top: 1rem; }
+.plain-disclosure > summary { cursor: pointer; min-height: 44px; padding: .75rem 0; color: var(--link); font-size: .875rem; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.plain-disclosure > summary::after { content: '+'; font-size: 1.125rem; flex-shrink: 0; }
+.plain-disclosure[open] > summary::after { content: '−'; }
+.plain-disclosure > p { color: var(--muted); font-size: .875rem; line-height: 1.6; margin: .5rem 0 1rem; }
+.plain-disclosure > label { margin-top: .75rem; }
+.modal { background: var(--surface); box-shadow: 0 1.25rem 4rem var(--shadow); }
+.modal-heading { background: var(--surface); border-bottom: 0; }
+.modal-heading h2 { letter-spacing: -.02em; line-height: 1.25; }
+.modal .icon-button { min-width: 44px; min-height: 44px; }
+.simple-entry-form .amount-input { border-bottom: 2px solid var(--border); }
+.simple-entry-form .amount-input:focus-within { border-bottom-color: var(--link); box-shadow: none; }
+.simple-entry-form .amount-input input:focus { outline: 0; box-shadow: none; }
+.simple-entry-form .quick-entry { margin-top: 0; }
+.bank-step { font-size: .875rem; color: var(--muted); margin-top: 1rem; }
+.records-status { display: flex; gap: 1rem; align-items: flex-start; padding: .75rem 0; }
+.records-status > svg { color: var(--link); }
+.records-status h3 { font-size: 1rem; }
+.records-status p, .backup-filename { color: var(--muted); font-size: .875rem; line-height: 1.6; margin-top: .5rem; }
+.backup-download { width: 100%; margin-top: 1rem; }
+.backup-filename { margin: .75rem 0 1rem; }
+.backup-history, .backup-signout { display: flex; min-height: 44px; margin-top: 1rem; }
+.change-fields { margin: .75rem 0; font-size: .875rem; }
+.change-fields > div { display: flex; gap: 1rem; justify-content: space-between; padding: .4rem 0; }
+.change-fields dt { color: var(--muted); }
+.change-fields dd { color: var(--text); text-align: right; margin: 0; overflow-wrap: anywhere; max-width: 65%; }
+.original-record { padding: .5rem 1rem 1rem; color: var(--muted); font-size: .875rem; }
+.original-record > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.original-record pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.text-button { min-height: 44px; }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) { .modal-backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; } }
+
+.app-shell[data-page='Advanced'] .main-content { max-width: 760px; }
+.more-menu { max-width: none; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
+.action-grid { display: block; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--surface); }
+.action-grid .action-card { padding: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; margin: 0; }
+.action-grid .action-card:last-child { border-bottom: 0; }
+.action-card > summary { list-style: none; display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; min-height: 64px; cursor: pointer; }
+.action-card > summary strong { font-size: .9375rem; }
+.action-card > summary svg { color: var(--muted); }
+.action-card[open] > summary svg { transform: rotate(180deg); }
+.action-body { border-top: 1px solid var(--border); padding: 1rem 1.25rem; }
+.simple-disclosure .actions-overview { background: transparent; border: 0; margin: 0; }
+.plain-disclosure .check-in-card { background: transparent; border: 0; padding: 1rem 0; }
+.app-shell[data-page='Month-End Review'] .simple-disclosure > .allocation-columns { margin: 1rem; }
+.app-shell[data-page='Money Flow'] .flow-node { background: transparent; border: 0; padding: .25rem 0; }
+.app-shell[data-page='Money Flow'] .flow-list li { background: transparent; border-radius: 0; border: 0; border-top: 1px solid var(--border); padding: 1.25rem 0; }
+.app-shell[data-page='Money Flow'] .flow-list { gap: 0; }
+@media (prefers-contrast: more) { .simple-entry-form .amount-input:focus-within { outline: 2px solid var(--link); } }
+
+.tool-group .more-links button { display: flex; border-radius: 0; }
+.tool-group .more-links button:hover, .tool-group .more-links button:active { background: var(--hover); }
+.tool-group .more-links button > svg:last-child { color: var(--muted); }
+@media (max-width: 760px) { .tool-group .more-links button { padding: .875rem 1rem; } .action-card > summary, .action-body { padding: 1rem; } }
+
+/* The daily plan stays about spending; forecasts and deeper reports open on demand. */
+.plan-income { margin: -8px 0 24px; }
+.income-plan-row { display: flex; justify-content: space-between; gap: 16px; width: 100%; text-align: left; }
+.income-plan-row strong { display: inline-flex; align-items: center; gap: 10px; font-weight: 550; }
+.plan-income p { font-size: .875rem; }
+.advanced-tools { background: transparent; }
+.advanced-tools > .more-links { padding: 0 16px; }
+.advanced-tools > .simple-disclosure { margin: 0 16px 12px; }
+.advanced-tools .simple-disclosure > summary { min-height: 56px; }
+.more-menu { display: flex; flex-direction: column; }
+.more-menu > .tool-group { order: -1; }
+.simple-metric.warning strong { color: var(--danger); }

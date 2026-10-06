@@ -1,3 +1,4 @@
+import { friendlyError } from './words';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { BrandMark } from './Brand';
 import { Download, Upload, LogOut, ArrowLeft } from 'lucide-react';
@@ -6,7 +7,7 @@ import { stateTables, validateBackup } from '../shared/backup';
 import { initialState } from '../shared/seed';
 import { api } from './api';
 
-const tableLabels = { accounts: 'Accounts', categories: 'Categories', budgets: 'Budget items', income: 'Income plans', transactions: 'Transactions', audit: 'Audit history', notesReminders: 'Notes & reminders', dailyCheckIns: 'Daily check-ins', leakReviews: 'Leak reviews', expenseFunding: 'Expense funding', incomeSources: 'Income sources', settings: 'Settings', monthReviews: 'Month reviews', balanceReconciliations: 'Balance comparisons' };
+const tableLabels = { accounts: 'Accounts', categories: 'Categories', budgets: 'Budget items', income: 'Income plans', transactions: 'Transactions', audit: 'Change history', notesReminders: 'Notes & reminders', dailyCheckIns: 'Daily checks', leakReviews: 'Spending reviews', expenseFunding: 'Bill settings', incomeSources: 'Saved payers', settings: 'Settings', monthReviews: 'Month reviews', balanceReconciliations: 'Balance comparisons' };
 
 export default function CloudSetup({ onImported, onSignOut }: { onImported: () => Promise<void>; onSignOut: () => Promise<void> }) {
   const fileInput = useRef<HTMLInputElement>(null);
@@ -15,7 +16,7 @@ export default function CloudSetup({ onImported, onSignOut }: { onImported: () =
   const [hasDeviceRecords] = useState(() => { try { return Boolean(localStorage.getItem('cash-flow-tracker-v1')); } catch { return false; } });
   function review(input: unknown, label: string) {
     setError(''); setConfirmed(false);
-    try { setCandidate(validateBackup(input)); setSource(label); } catch (e) { setCandidate(undefined); setError((e as Error).message); }
+    try { setCandidate(validateBackup(input)); setSource(label); } catch (e) { setCandidate(undefined); setError(friendlyError(e)); }
   }
   function reviewDevice() {
     try {
@@ -31,7 +32,7 @@ export default function CloudSetup({ onImported, onSignOut }: { onImported: () =
     try {
       if (file.size > 2_000_000) throw new Error('Choose a backup smaller than 2 MB.');
       review(JSON.parse(await file.text()), file.name);
-    } catch (e) { setError((e as Error).message); }
+    } catch (e) { setError(friendlyError(e)); }
   }
   function download() {
     const url = URL.createObjectURL(new Blob([JSON.stringify({ ...candidate, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' }));
@@ -42,7 +43,7 @@ export default function CloudSetup({ onImported, onSignOut }: { onImported: () =
     try {
       if (!copied) { await api('cloud/import', { confirmed: true, state: candidate }); setCopied(true); }
       await onImported();
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); }
   }
   return <div className="login-screen"><section className="panel cloud-setup" aria-busy={busy}>
     <BrandMark />
@@ -54,16 +55,16 @@ export default function CloudSetup({ onImported, onSignOut }: { onImported: () =
       {!hasDeviceRecords && <p className="cloud-storage-note">No records are saved in this browser at this address. Choose the JSON backup you downloaded from your original tracker.</p>}
       <div className="cloud-choices"><button type="button" className="button primary" disabled={busy} onClick={() => fileInput.current?.click()}><Upload size={16} />Choose JSON backup</button>{hasDeviceRecords && <button type="button" className="button secondary" disabled={busy} onClick={reviewDevice}>Review this device</button>}</div>
       <p className="field-hint">Open Downloads and select the .json file itself. Folders cannot be imported.</p>
-      <details className="cloud-start-fresh"><summary>Starting without an existing backup?</summary><p>The starting plan has 5 accounts, 13 budget items, no recorded transactions, and unknown opening balances. Choose your backup if you already have records.</p><button type="button" className="button secondary" onClick={() => review(initialState(), 'Starting plan — no recorded transactions')}>Review starting plan</button></details>
+      <details className="cloud-start-fresh"><summary>Starting without an existing backup?</summary><p>The starting plan has 5 accounts, 13 budget items, no recorded transactions, and balances still to add. Choose your backup if you already have records.</p><button type="button" className="button secondary" onClick={() => review(initialState(), 'Starting plan — no recorded transactions')}>Review starting plan</button></details>
     </> : <>
       <h2 className="cloud-source">{source}</h2>
       <dl className="cloud-counts">{stateTables.filter(table => candidate[table].length).map(table => <div key={table}><dt>{tableLabels[table]}</dt><dd>{candidate[table].length}</dd></div>)}</dl>
-      <p>{candidate.transactions.length} transactions. {candidate.accounts.filter(a => a.balanceCents !== null).length} known opening balances. Amounts, classifications, timestamps, and history will be preserved.</p>
+      <p>{candidate.transactions.length} transactions. {candidate.accounts.filter(a => a.balanceCents !== null).length} saved starting balances. Your entries, amounts and earlier changes stay as they are.</p>
       {!copied && <><button type="button" className="button secondary" disabled={busy} onClick={download}><Download size={16} />Download safety backup</button><label className="cloud-confirm"><input type="checkbox" checked={confirmed} disabled={busy} onChange={e => setConfirmed(e.target.checked)} />I have kept a backup and reviewed these records.</label>{!confirmed && <p className="field-hint">Check the box above to enable Import & open tracker.</p>}</>}
       <button type="button" className="button primary" disabled={(!confirmed && !copied) || busy} onClick={() => void openTracker()}>{busy ? copied ? 'Opening tracker…' : 'Importing records…' : copied ? 'Open tracker' : 'Import & open tracker'}</button>
       {!copied && <button type="button" className="text-button" disabled={busy} onClick={() => { setCandidate(undefined); setConfirmed(false); setError(''); }}><ArrowLeft size={16} />Choose different records</button>}
     </>}
     {error && <p className="form-error" role="alert">{error}</p>}
-    <button type="button" className="text-button" disabled={busy} onClick={async () => { setError(''); setBusy(true); try { await onSignOut(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}><LogOut size={16} />Sign out</button>
+    <button type="button" className="text-button" disabled={busy} onClick={async () => { setError(''); setBusy(true); try { await onSignOut(); } catch (e) { setError(friendlyError(e)); } finally { setBusy(false); } }}><LogOut size={16} />Sign out</button>
   </section></div>;
 }

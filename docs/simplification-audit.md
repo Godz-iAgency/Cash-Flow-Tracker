@@ -5,16 +5,16 @@ The daily interface serves five jobs: see my cash, record money, review entries,
 ## Daily screens
 
 - **Home:** known checking/savings cash, smaller credit-card debt, three quick actions, this month's spending and budget left, editable entries from today, and Check my bank. Missing balances open individual account setup. Income, net cash flow, review warnings, the month picker and financial-risk cards no longer crowd Home.
-- **Activity:** entries grouped by day, newest first, search and type filter. The spending and income totals filter the list. Tap an entry to edit or remove it; removal retains its original value in the audit.
-- **Budget:** three headline values, one compact category list, and details that open in place. Items show budget, spent and left; spending opens its supporting entries. Edit name, amount, category, due day, payment account and Need/Want. Changes can apply from this month forward or only this month. Hide an item without deleting earlier plans. Pay bill uses the unpaid amount, and Paid appears only from recorded expenses.
-- **Accounts:** cash and credit cards owed, collapsible Personal/Business groups and account rows. Tap an account for its movements, editing and bank check. Account movements include every entry affecting that account, independently of the transaction's Personal/Business classification.
-- **Advanced:** spending insights, charts, notes/reminders, money flow, check-in history, month-end review, settings, installation, appearance, refresh, storage/backup and detailed history. The daily paths do not require these tools. Spending today, this week and this month open matching entries; the week can span two months.
+- **History:** entries grouped by day, newest first, search and type filter. The spending and income totals filter the list. Tap an entry to edit or remove it; removal retains its original value in the audit.
+- **Plan:** planned, spent and left-to-spend values, one compact category list, and details that open in place. Items show budget, spent and left; spending opens its supporting entries. Edit name, amount, category, due day, payment account and Need/Want. Changes can apply from this month forward or only this month. Hide an item without deleting earlier plans. Pay bill uses the unpaid amount, and Paid appears only from recorded expenses.
+- **My money:** cash and credit cards owed, collapsible Personal/Business groups and account rows. Tap an account for its movements, editing and bank check. Account movements include every entry affecting that account, independently of the transaction's Personal/Business classification.
+- **More:** spending insights, charts, notes/reminders, money flow, check-in history, month-end review, settings, installation, appearance, refresh, storage/backup and detailed history. The daily paths do not require these tools. Spending today, this week and this month open matching entries; the week can span two months.
 
-The same Personal/Business/All choice persists across the five screens. Home and Accounts use current balances. Activity and Budget retain their month picker. Both desktop and phone navigation expose the same five tabs.
+The same Personal/Business/All choice persists across the five screens. Home and Accounts use current balances. History and Plan retain their month picker. Both desktop and phone navigation expose the same five tabs.
 
 ## Entry and bank check
 
-Spent opens with Amount focused. Search What for, choose Paid from, and save. Got paid and Move money use the same form; a credit-card destination says Pay card and remains a transfer. Optional store, note, date, time and classification live in More options. Local quick entry accepts `5 grocery heb`, `$37.74 gas` and `.05 other`; it fills a draft and never saves automatically. Keyboard order follows amount, purpose, account and Save; optional controls remain keyboard accessible. A stable entry ID and save lock prevent duplicate taps. Saved offers five seconds of Undo and Add another.
+Spent opens with Amount focused. Search What for, choose Paid from, and save. Got paid and Move money use the same form; a credit-card destination says Pay card and remains a transfer. Optional store, note, date, time and classification live in More options. Quick entry under More options accepts `5 grocery heb`, `$37.74 gas` and `.05 other`; it fills a draft and never saves automatically. Keyboard order follows amount, purpose, account and Save; optional controls remain keyboard accessible. A stable entry ID and save lock prevent duplicate taps. Saved offers five seconds of Undo and Add another.
 
 Check my bank works one account at a time. Matching balances advance to the next account. A difference opens entries since the previous check and offers Add missing entry or an explicit Bank is right, fix balance action. A correction retains both the original mismatch and corrected match as immutable evidence. Today completes when all visible accounts in the scope match, and another movement requires a new check. The server validates bank observations using the device's time-zone offset.
 
@@ -44,3 +44,23 @@ Phone performance checks use a simulated 390-pixel viewport and CPU throttling, 
 - Home, Budget and Add screenshots in both modes are available in the local review gallery; all five daily pages also have desktop and phone screenshots.
 
 Phone review: tap a spending total to open its entries, expand a Budget item and an Account, then try a small Spent entry and Undo in the sample-data preview. Review installation and scrolling on the actual phone before live publication.
+
+
+## Plain-language pass — 2026-10-06
+
+The five visible tabs are Home, History, Plan, My money and More. Everyday entry actions say I spent, I got paid and Move money. Daily screens avoid accounting terms; deeper reports and earlier detailed tools remain behind Advanced inside More. The target is wording understandable without finance knowledge, rather than a numerical reading-level certification.
+
+Plan shows the spending plan, spending so far and the amount left. If spending exceeds the plan, it says Over my plan with the positive amount over and a coral highlight. Expected income and the forecast after planned spending open under Money coming in. Home removes the repeated income number. Missing bank balances are explicit, and incomplete cash totals say Balances added so far.
+
+The Apple skill also guided a shorter default entry form, a quiet amount field, grouped settings and compact reminder rows. Bill fields, report details and raw original history open only on request. Purchases outside the plan retain the words typed into What for; keyboard navigation no longer replaces them with Other. The change history presents readable Before/After values; original records remain available underneath. Income breakdowns follow Personal/Business selection. Dialogs keep background controls inert, restore focus on close, and expose invalid fields inside closed disclosures.
+
+Backup & devices explains the downloaded .json file and how to use another device in everyday words. Google Sheets is labeled as a dated copy; it is still a manual reporting export. Connection errors offer a next action without exposing server output. All financial data paths and calculation rules remain intact; testing used sample records only.
+
+
+### Final validation for the plain-language pass
+
+The production build and type checks passed. All 98 browser checks passed in the final complete run, with no skips. Coverage includes the plain tab names, reports collapsed by default, free-text purchase descriptions, bank checks, duplicate saves and Undo, reminders and immutable history, report scopes, hidden-account editing, backup review/import, PWA updates, offline privacy, contrast in both themes and 320–1920 pixel layouts with enlarged text up to 200%.
+
+Reduced motion produced zero animations, Add stayed still, and the repeating Home wave paused in the background. In the CPU-throttled simulated phone check, the 95th-percentile frame intervals were 17.0 ms without effects and 17.0 ms with the wave and ripple. This is browser simulation, not measurement on a physical phone. Home, Plan and Add screenshots in both themes are in the local review gallery.
+
+The prior 68 unit, persistence, security and accounting checks remain the financial baseline; shared and server calculation code did not change in this plain-language pass. No live financial records were changed.

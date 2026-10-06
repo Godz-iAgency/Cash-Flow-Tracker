@@ -9,7 +9,7 @@ export function IconBox({ type, small = false }: { type: TransactionType; small?
 export function Progress({ value, className = '' }: { value: number; className?: string }) {
   const percentage = Math.max(0, Math.min(100, value));
   const left = 100 - percentage;
-  return <div className={`progress ${value > 100 ? 'over' : ''} ${className}`} role="progressbar" aria-valuenow={Math.round(left)} aria-valuemin={0} aria-valuemax={100} aria-label="Budget left"><span style={{ width: `${left}%` }} /></div>;
+  return <div className={`progress ${value > 100 ? 'over' : ''} ${className}`} role="progressbar" aria-valuenow={Math.round(left)} aria-valuemin={0} aria-valuemax={100} aria-label="Plan left to spend"><span style={{ width: `${left}%` }} /></div>;
 }
 export function Empty({ title, text, action, onClick }: { title: string; text: string; action?: string; onClick?: () => void }) {
   return <div className="empty"><span className="empty-icon"><Leaf size={24} /></span><h3>{title}</h3><p>{text}</p>{action && <button className="button secondary" onClick={onClick}>{action}</button>}</div>;
@@ -19,6 +19,15 @@ export function Modal({ title, subtitle, children, onClose, wide = false }: { ti
   const close = useRef(onClose); close.current = onClose;
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
+    const background: { element: HTMLElement; inert: boolean }[] = [];
+    let branch = ref.current?.parentElement;
+    while (branch?.parentElement) {
+      for (const sibling of branch.parentElement.children) if (sibling !== branch && sibling instanceof HTMLElement) {
+        background.push({ element: sibling, inert: sibling.inert }); sibling.inert = true;
+      }
+      branch = branch.parentElement;
+      if (branch === document.body) break;
+    }
     const frame = requestAnimationFrame(() => { const first = ref.current?.querySelector<HTMLElement>('[data-autofocus]'); (first ?? ref.current)?.focus(); });
     function handle(event: KeyboardEvent) {
       if (event.key === 'Escape') close.current();
@@ -30,9 +39,9 @@ export function Modal({ title, subtitle, children, onClose, wide = false }: { ti
       }
     }
     document.addEventListener('keydown', handle);
-    return () => { cancelAnimationFrame(frame); document.removeEventListener('keydown', handle); previous?.focus(); };
+    return () => { cancelAnimationFrame(frame); document.removeEventListener('keydown', handle); background.forEach(({ element, inert }) => { element.inert = inert; }); previous?.focus(); };
   }, []);
-  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div ref={ref} className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}><div className="modal-heading"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={21} /></button></div><div className="modal-content" tabIndex={0} role="region" aria-label={`${title} content`}>{children}</div></div></div>;
+  return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}><div ref={ref} className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} onInvalidCapture={event => { let parent = (event.target as HTMLElement).parentElement; while (parent && parent !== ref.current) { if (parent instanceof HTMLDetailsElement) parent.open = true; parent = parent.parentElement; } }}><div className="modal-heading"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div><button className="icon-button" aria-label="Close dialog" onClick={onClose}><X size={21} /></button></div><div className="modal-content" tabIndex={0} role="region" aria-label={`${title} content`}>{children}</div></div></div>;
 }
 export function TransactionList({ transactions, state, onEdit, compact = false }: { transactions: Transaction[]; state: State; onEdit: (t: Transaction) => void; compact?: boolean }) {
   return <div className={`transaction-list ${compact ? 'compact' : ''}`}>
