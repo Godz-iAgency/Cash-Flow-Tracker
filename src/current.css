@@ -48,7 +48,6 @@
 .current-launch { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; text-align: left; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface) url('/water/clear-flow.webp') center / cover; }
 .current-launch-copy { background: var(--water-backplate); padding: 12px 16px; border-radius: 12px; }
 .current-launch-copy strong { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 550; font-size: 1rem; }
-.current-launch-copy small { display: block; color: var(--muted); font-size: .875rem; margin-top: 4px; }
 .current-launch > svg { background: var(--water-solid); padding: 10px; box-sizing: content-box; color: var(--link); border-radius: 50%; flex-shrink: 0; }
 @media(max-width:900px) { .current-accounts { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width:540px) {
