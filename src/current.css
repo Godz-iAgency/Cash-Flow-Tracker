@@ -2,15 +2,11 @@
 .modal.wide:has(.current-window) { width: min(1120px,calc(100vw - 48px)); max-width: 1120px; background: var(--canvas); border: 1px solid var(--border); border-radius: 28px; }
 .modal.wide:has(.current-window) .modal-heading { padding-bottom: 20px; }
 .modal.wide:has(.current-window) .modal-heading h2 { font-size: 1.75rem; letter-spacing: -.04em; }
-.modal.wide:has(.current-window) .modal-heading p { color: var(--link); }
 .current-window { display: grid; gap: 24px; }
 .current-hero { position: relative; isolation: isolate; overflow: hidden; padding: 32px; min-height: 310px; display: flex; align-items: center; border: 1px solid var(--border); border-radius: 24px; background: url('/water/clear-surface.webp') center / cover; }
 .current-hero-copy { position: relative; z-index: 1; width: fit-content; max-width: 100%; background: var(--water-backplate); border: 1px solid var(--border); border-radius: 20px; padding: 28px 32px; }
-.current-kicker { display: flex; align-items: center; gap: 8px; color: var(--link); font-size: .875rem; }
-.current-hero-copy > p { margin: 8px 0 30px; color: var(--text); font-size: 1.125rem; letter-spacing: -.02em; }
 .current-cash-label { color: var(--muted); font-size: .875rem; }
-.current-cash { display: block; font-size: clamp(1rem,7.6vw,4.5rem); font-weight: 550; letter-spacing: -.055em; line-height: 1.1; margin: 8px 0 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.current-fine { color: var(--muted); font-size: .875rem; }
+.current-cash { display: block; font-size: clamp(1rem,7.6vw,4.5rem); font-weight: 550; letter-spacing: -.055em; line-height: 1.1; margin: 8px 0 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .current-water-mark { position: absolute; right: 24px; bottom: 14px; font-size: clamp(2rem,7vw,6rem); font-weight: 650; letter-spacing: -.05em; color: var(--water-solid); opacity: .45; pointer-events: none; }
 .current-income { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
 .current-income > summary { display: flex; align-items: center; gap: 18px; padding: 24px; list-style: none; cursor: pointer; }
@@ -22,7 +18,6 @@
 .current-income-split { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; border-top: 1px solid var(--border); padding: 24px; }
 .current-income-split span { color: var(--muted); font-size: .875rem; }
 .current-income-split strong { display: block; font-size: 1.25rem; font-weight: 550; overflow-wrap: anywhere; }
-.current-income-split p { grid-column: 1/-1; color: var(--muted); font-size: .875rem; margin: 0; }
 .current-account-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
 .current-account-heading h3 { margin: 0; font-size: 1rem; font-weight: 550; }
 .segmented.current-scope { width: fit-content; max-width: 100%; flex-wrap: wrap; }
@@ -38,13 +33,9 @@
 .current-account-name { display: block; font-size: 1rem; font-weight: 550; overflow-wrap: anywhere; }
 .current-account-type { display: block; font-size: .875rem; color: var(--muted); margin-top: 5px; }
 .current-account-money { display: block; margin: 24px 0 6px; font-size: clamp(1rem,3.6vw,2rem); letter-spacing: -.04em; font-weight: 550; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.current-account-caption { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); font-size: .875rem; }
-.current-account-caption > svg { color: var(--link); flex-shrink: 0; }
 .current-account-detail { padding: 0 20px 20px; color: var(--muted); font-size: .875rem; }
 .current-account-detail > p { border-top: 1px solid var(--border); padding-top: 16px; }
-.current-account-detail > span { display: flex; align-items: center; gap: 8px; color: var(--link); }
-.current-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 8px 0 12px; }
-.current-footer > span { color: var(--muted); display: flex; align-items: center; gap: 8px; font-size: .875rem; }
+.current-footer { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 16px; padding: 8px 0 12px; }
 .current-launch { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; text-align: left; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface) url('/water/clear-flow.webp') center / cover; }
 .current-launch-copy { background: var(--water-backplate); padding: 12px 16px; border-radius: 12px; }
 .current-launch-copy strong { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 550; font-size: 1rem; }

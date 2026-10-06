@@ -19,14 +19,14 @@ test('Current uses only copied account labels and never reads or writes the real
  page.on('request',r=>{if(new URL(r.url()).pathname.startsWith('/api/')) {requests++;if(r.method()!=='GET')writes++;}});
  await page.goto('/'); await expect(page.getByRole('note',{name:'Record storage'})).toHaveText('Saved online');
  const before=await page.evaluate(()=>JSON.stringify({...localStorage})); const count=requests;
- const dialog=await openCurrent(page); await expect(dialog).toContainText('Sandbox'); await expect(dialog).toContainText('Never saved');
+ const dialog=await openCurrent(page); await expect(dialog.getByRole('region',{name:'Total cash'})).toBeVisible(); await expect(dialog).not.toContainText(/sandbox|imagined|made-up|life I’m building|everything that matters|picture what’s possible/i);
  await expect(dialog.locator('.current-cash')).toHaveText('$2,359,971.17');
  await expect(dialog.locator('.current-account')).toHaveCount(5); await expect(dialog).toContainText('My renamed checking');
  const amounts=await dialog.locator('.current-account-money').allTextContents();expect(new Set(amounts).size).toBe(5);
  await dialog.locator('.current-income > summary').click();await expect(dialog).toContainText('$100,000.00');await expect(dialog).toContainText('$60,000.00');await expect(dialog).toContainText('$40,000.00');
  await dialog.getByRole('button',{name:'Business',exact:true}).click();await expect(dialog.locator('.current-account')).toHaveCount(2);await expect(dialog).toContainText('$1,247,890.36');
  await dialog.getByRole('button',{name:'Personal',exact:true}).click();await expect(dialog.locator('.current-account')).toHaveCount(3);
- await dialog.locator('.current-account > summary').first().click();await expect(dialog).toContainText('made-up balance');
+ await dialog.locator('.current-account > summary').first().click();await expect(dialog).toContainText('Included in total cash.'); await expect(dialog).not.toContainText(/sandbox|imagined|made-up|imagine more/i);
  await expect(dialog.getByRole('button',{name:/Save|Move money|Export|Pay card/})).toHaveCount(0);
  await dialog.getByRole('button',{name:'Back to my tracker'}).click();await expect(dialog).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Current',exact:true})).toBeFocused();
