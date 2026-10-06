@@ -209,3 +209,8 @@ Design preview (`?preview=simple`) is separate from signed-in storage. A notice 
 
 
 To update a bank balance, open **Cash flow → Banks & cards** and tap the pencil beside that bank. Enter the amount shown in your bank app and choose **Save balance**. This updates your tracked balance; it does not move actual money or add a purchase. The Home cash amount also opens Cash flow. All five everyday pages use the same dark appearance with static clear-water photographs.
+
+
+## Current
+
+Open **Advanced → Current** for a separate imagination window. It copies the names, last four digits, types and Personal/Business labels of the first five visible accounts. All displayed amounts are fictional: the original five accounts show $2,359,971.17 across checking and savings, with $100,000 imagined monthly income. Credit-card room is shown separately from cash. Current has no save, export, transfer or database access; closing it discards its local filter and expanded sections. Your normal tracker and backups keep their actual records.
