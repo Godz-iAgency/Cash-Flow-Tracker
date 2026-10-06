@@ -64,3 +64,26 @@ The production build and type checks passed. All 98 browser checks passed in the
 Reduced motion produced zero animations, Add stayed still, and the repeating Home wave paused in the background. In the CPU-throttled simulated phone check, the 95th-percentile frame intervals were 17.0 ms without effects and 17.0 ms with the wave and ripple. This is browser simulation, not measurement on a physical phone. Home, Plan and Add screenshots in both themes are in the local review gallery.
 
 The prior 68 unit, persistence, security and accounting checks remain the financial baseline; shared and server calculation code did not change in this plain-language pass. No live financial records were changed.
+
+
+## Income, expenses and clear water — 2026-10-06
+
+This release supersedes the earlier tab names and two-mode palette. The five main pages are Home, Income, Expenses, Cash flow and Advanced. Personal, Business and All stay available. Home keeps three primary money figures. Income offers editable sources and Add pay, with the receiving account filled from that source. Expenses is the original expense list, with Edit and a monthly Paid control. Cash flow shows the actual source and destination for each movement and has Move money plus collapsed Banks & cards. The ledger, income statement, per-bank cash flow statement and earlier tools open on Advanced.
+
+Checking Paid opens the remaining payment amount; only saving an expense changes the status. Partial payments remain unpaid with an amount left. Opening a checked bill reviews its actual payments instead of deleting them. Selecting another month separates its payments and explicitly dates a new payment to that month. Paying a personal bill with a business bank keeps it personal. Cross-scope transfers appear on both affected banks in the cash statement; transfers and card payments do not become extra spending in the income statement. The 13 original personal bill amounts and original income plans remain intact; no business bills were invented.
+
+There is one appearance. Two newly generated, compressed clear-water photographs sit behind pale text backplates on Home, Income, Expenses and Cash flow. The original logo stays. Final assets and exact image-generation prompts are documented in `docs/clear-water-assets.md`. Photography is static, with no repeated wave or animation. Page fades and a single save ripple stay brief; Add stays still and reduced motion disables effects. The small-phone navigation and floating Add button reflow with enlarged text. Rapid taps on Save cannot reopen an entry through the closing form.
+
+No live financial records were changed. Browser tests use synthetic records; preview mode makes no cloud requests. Firestore and the existing dated Google Sheets export keep their existing behavior. This remains the `codex/simple-daily-money` review branch and a Vercel preview, consistent with the original instruction to ask before merging to main or changing real data.
+
+
+### Clear-water release validation
+
+- Production build and type checks passed on the final sources.
+- 68 unit, persistence, security and financial checks passed, with no skips.
+- The complete browser suite passed all 102 checks with no skips. After the final Paid-label polish, all 22 focused expense/payment, contrast, enlarged-text, readability and screenshot checks passed on the rebuilt app.
+- Viewport coverage runs from 320 to 1920 pixels, including 200% text. All five mobile navigation buttons fit within the viewport, the floating Add button clears the navigation, and water-card text passes contrast over worst-case bright and dark image pixels.
+- Reduced motion has no animations; Add has no decorative motion. In the 4x CPU-throttled 390-pixel phone simulation, the 95th-percentile scrolling interval was 17.0 ms both at baseline and with the one-shot ripple, with no stalled frames. This is simulated browser evidence, not a measurement on a physical phone.
+- Home, Income, Expenses, Cash flow, Advanced and Add were captured at 320, 390, 768 and 1440 pixels. The final phone/desktop gallery is `.local/clear-water/gallery.html`; the phone contact sheet is `.local/clear-water/gallery.png`. Home, Income, Expenses and Cash flow were also inspected at 320 pixels with 200% text.
+
+Review the sample-data preview by adding a payment from Income, opening Paid beside a bill and saving or cancelling, moving money between two accounts, and expanding Banks & cards or the Advanced ledger. Check installation and scrolling on the actual phone before live publication.

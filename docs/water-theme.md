@@ -1,31 +1,31 @@
-# Water appearance preview
+# Clear-water design
 
-This update implements the latest water-theme request against the existing app. It preserves layout dimensions, spacing, responsive rules, navigation positions, financial classifications, cent calculations and the existing workflows. The broader entry, budget and bank-check redesign in the attached brief is outside this visual pass.
+The current design follows the Apple design skill and the user's latest brief: one appearance, real crystal-water photographs, simple lists, direct actions, and readable words. It replaces the former navy/coral palette and optional Dark / Light switch. Earlier themes remain in Git history.
 
-## Palette and appearance
+## Everyday pages
 
-All UI color values are in `src/water-tokens.css`. Both stylesheet layers use those tokens. Dark mode is the default. **Advanced → Appearance → Dark / Light** remembers the preference on this browser/device without changing financial records. The app name and original logo assets are unchanged.
+Home gives the known bank balance and quick actions to spend, receive or move money. Income lists saved income sources and fills a payment draft with their receiving account. Expenses lists only the existing items for the selected Personal / Business scope, with Edit and monthly Paid controls. Cash flow shows the account/card, amount and destination for each recorded movement; every movement opens for editing. Banks & cards opens for balances, account edits and bank checks.
 
-The navy, aqua, seafoam and coral follow the supplied palette. Light mode uses the supplied background, cards, text and button; links, muted text, success and warning text use darker related shades so text remains readable. The frosted finish uses static gradients and subtle inset light rather than a large scrolling blur layer. The build generates browser/install/offline colors from the same token source.
+Advanced groups the ledger, income statement and cash-flow statement on one page. The income statement uses received minus spent and excludes transfers. The bank cash-flow statement includes both ends of transfers and excludes credit-card purchases until money actually leaves a bank. These are summaries of recorded entries, not formal tax statements or verified bank feeds. Older detailed tools, monthly plans, reminders, immutable history, backups and installation remain available on demand.
 
-## Motion and feedback
+## Monthly Paid
 
-- The Home SVG wave uses one compositor transform over 28 seconds. It pauses when the document is hidden.
-- The Add dialog turns off all decorative animation and transitions, including effects behind the dialog.
-- Page fades last 180 ms, budget-water reveals 280 ms and the single successful-save ripple 280 ms. The budget water shows the amount left rather than the amount spent. No effects play sounds.
-- Reduced-motion mode disables animations and transitions and omits the ripple.
-- A successful save shows **Saved → Undo** for five seconds. Double submissions share one stable entry ID and are locked while saving.
+Paid is derived from actual recorded payments for the expense item and selected month. An unchecked box opens a draft for the amount left. Saving creates one expense and its audit record; cancelling changes nothing. Partial payments remain unchecked and show the amount left. A checked box opens its payments for review or correction rather than silently deleting money records. Each month is separate, and historical plan names still match earlier payments.
 
-Undo is the one requested behavior addition. A new save is cancelled through a retained, inactive revision and an immutable audit record; an edit is restored through another revision. Stale, repeated and expired Undo requests are rejected, as are requests after a relevant bank snapshot changes. Firestore handles the write and audit atomically. Legacy Sheets appends a `voided` column and revision without overwriting existing rows. Private endpoints retain the existing sign-in, origin and JSON checks.
+The list contains all 13 supplied personal items and no invented business items. Existing amounts and plan versions stay intact. Financial storage, authentication, integer-cent calculations, bank snapshots and atomic audit writes are unchanged.
 
-## Review without live data
+## Photography and materials
 
-Append `?preview=water` to the branch deployment URL to use synthetic records. This mode makes no cloud API requests and uses a separate on-device storage key. It cannot import, alter or export real cloud financial records. Sample entries can be added and undone to review the interaction. The preview banner identifies sample data.
+Selected large and small cards use two compressed photographs generated with the built-in image tool. See [assets and final prompts](clear-water-assets.md). Static image delivery totals about 390 KiB. Lists, inputs and entry forms use plain surfaces for speed and clarity.
 
-The update was developed and tested on a review branch, then merged into main after the user explicitly approved publishing it. No live financial data was written during development, validation or deployment.
+One palette lives in `src/water-tokens.css`. Water-card text has a 96% pale backplate, tested against both black and white pixels behind it. Increased contrast and reduced transparency make the plate opaque. The original logo remains intact. Every daily page, optional editor and enlarged-text layout receives contrast and overflow checks.
 
-## Validation
+## Motion and entry
 
-The production build and all 58 financial/security unit checks passed. The 81 browser scenarios were validated through the full suite and targeted reruns; the final 14 water-theme, screenshot and PWA checks all passed. The added checks cover text contrast on every page and its forms in both modes, light-mode persistence, reduced motion, background pausing, a still Add dialog, expense/income/card-transfer Undo, double submissions and scroll frame timing at phone size with fourfold CPU throttling. The contrast audit checks visible text, form values and placeholders against card-gradient endpoints, using the [WCAG text-contrast thresholds](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
+Water photos remain still. Page changes fade once for 180 ms; a successful save can play one 280 ms ripple and offers five seconds of Undo. Reduced motion removes both. Add disables decorative activity before painting and focuses Amount. Progress bars stay still, including collapsed reports behind a dialog. No sounds play.
 
-Screenshots of Home, Budget and Add in both modes are written to `.local/water/screenshots/`, along with phone versions. Contrast and scrolling results are in `.local/water/`. A browser performance sample is not a physical phone test; review on the intended phone remains useful.
+## Review safely
+
+Use `?preview=simple` on the branch deployment for synthetic records. Preview uses a separate browser-storage key and makes no cloud requests. Normal sign-in continues to use the existing Firestore configuration. Google Sheets remains a manual dated reporting export, not automatic two-way syncing.
+
+Validation uses desktop Chrome, phone/tablet viewport simulation and enlarged text. A simulated-phone frame-timing check is useful evidence, not a physical-device performance guarantee. The branch is pushed for Vercel preview review; publishing main follows the original review requirement.

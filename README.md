@@ -30,17 +30,17 @@ Open http://localhost:3001. No financial credentials are bundled in the frontend
 
 ## Screens and responsive behavior
 
-- **Home:** Money I have, I owe on cards, I spent / I got paid / Move money, this month's spending, today's entries and Check my bank.
-- **History:** entries grouped by day; find, filter, edit or remove an entry while keeping its saved history.
-- **Plan:** Plan to spend, Spent so far and Left to spend. Open a group or item to see details, edit it or record a bill payment. Expected income opens under Money coming in.
-- **My money:** banks and cards in collapsible groups, movements and a guided bank check. Missing amounts invite Add bank balance.
-- **More:** settings, Backup & devices, appearance and installation. Advanced opens deeper reports, reminders, change history and other tools.
+- **Home:** Money I have, I spent / I got paid / Move money, this month's spending, today's entries and Check my bank.
+- **Income:** editable job and business income sources, quick Add pay, and received payments.
+- **Expenses:** your existing monthly expense list, an Edit button for each item, and Paid boxes. Checking Paid opens a payment entry; saving it records the amount and bank/card. Partial payments show the amount left. Opening a checked box reviews its payments without deleting them.
+- **Cash flow:** follow each payment from a bank/card, see where income arrives, move money between accounts, and open Banks & cards for balances.
+- **Advanced:** the full ledger, income and cash-flow statements, monthly plans, reports, reminders, history, settings, backup, and installation. Details open only when requested.
 
-The same Personal / Business / All choice persists across the five tabs. Phones have bottom navigation and a persistent Add entry button. Tablets and desktops have a sidebar. Forms become bottom sheets on phones, with amount focused and optional details under More options. Layouts respect safe areas, keyboard focus, larger text, reduced motion and reduced transparency. Money displays two decimal places. See [the simplification and verification audit](docs/simplification-audit.md).
+Personal / Business / All stays available across the app. Phones have five bottom tabs and an Add entry button; larger screens have a sidebar. Entry forms focus Amount first and put optional fields under More options. Text, controls and cards reflow with larger system text. See [the simplification and verification audit](docs/simplification-audit.md).
 
-## Water appearance
+## Clear-water appearance
 
-The calm navy and aqua theme defaults to dark. Choose **More → Appearance → Light** for the optional light version. All colors are centralized in `src/water-tokens.css`. The original logo and financial accounting rules remain intact; the daily screens use compact, interactive lists. See [the water appearance guide](docs/water-theme.md) for motion, save Undo, contrast verification and the isolated sample preview.
+There is one appearance on every device. Compressed, generated crystal-water photographs sit behind selected cards, with a pale backplate for readable text. The original logo stays intact. Colors live in `src/water-tokens.css`; no light/dark preference is required. The photos stay still. Reduced motion removes the one-time page fade and save ripple, and Add has no decorative animation. See [the design and asset guide](docs/water-theme.md).
 
 ## Source data and assumptions
 

@@ -1,14 +1,16 @@
+import { navigateTest } from './helpers';
 import { test, expect } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { waterPreviewState } from '../../shared/waterPreview';
 import { openMore } from './helpers';
 test.beforeEach(async ({ page }) => { await page.addInitScript(state => { if (!localStorage.getItem('cash-flow-tracker-v1')) localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(state)); }, waterPreviewState()); });
-test('appearance switch persists without modifying financial records; preview makes no cloud requests', async ({ page }) => {
+test('one appearance ignores old mode preferences without modifying financial records; preview makes no cloud requests', async ({ page }) => {
   const requests: string[] = []; page.on('request', request => { if (new URL(request.url()).pathname.startsWith('/api/')) requests.push(request.url()); });
+  await page.addInitScript(() => localStorage.setItem('cash-flow-appearance', 'light'));
   await page.goto('/?preview=water'); await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible();
   const original = await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!));
-  await page.getByRole('button', { name: 'More', exact: true }).click(); await page.getByRole('button', { name: 'Light', exact: true }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light'); await page.reload(); await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByRole('button', {name:'Advanced',exact:true}).click(); await expect(page.getByRole('button', { name: 'Light', exact: true })).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'water'); await page.reload(); await expect(page.locator('html')).toHaveAttribute('data-theme', 'water');
   expect(requests).toEqual([]);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cash-flow-tracker-v1')!))).toEqual(original);
 });
@@ -16,20 +18,19 @@ test('appearance switch persists without modifying financial records; preview ma
 test('reduce motion has no animations or ripples, including during tab changes and Add', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' }); await page.goto('/'); await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible();
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
-  await page.getByRole('button', { name: 'Plan', exact: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await navigateTest(page, 'Plan'); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   await page.getByRole('button', { name: 'Add entry', exact: true }).filter({ visible: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cash-flow-saved', { detail: { x: 100, y: 200 } })));
   await expect(page.locator('.save-ripple')).toHaveCount(0);
 });
 
-test('only the Home wave repeats, it pauses in the background, and Add is completely still', async ({ page }) => {
-  await page.goto('/'); await expect(page.locator('.home-wave')).toBeVisible(); await page.waitForTimeout(400);
-  const animations = await page.evaluate(() => document.getAnimations().map(animation => ({ iterations: animation.effect?.getTiming().iterations, duration: animation.effect?.getTiming().duration })));
-  expect(animations).toEqual([{ iterations: Infinity, duration: 28000 }]);
+test('water photography stays still in Home, the background and Add', async ({ page }) => {
+  await page.goto('/'); await expect(page.locator('.water-photo')).toBeVisible(); await page.waitForTimeout(400);
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await expect(page.locator('.home-wave')).toHaveCount(0);
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); });
-  await expect(page.locator('.home-wave')).toHaveCSS('animation-play-state', 'paused');
+  await expect(page.locator('html')).toHaveAttribute('data-background', 'true');
   await page.evaluate(() => { delete (document as unknown as { hidden?: boolean }).hidden; document.dispatchEvent(new Event('visibilitychange')); });
-  await expect(page.locator('.home-wave')).toHaveCSS('animation-play-state', 'running');
   await page.getByRole('button', { name: 'Add entry', exact: true }).filter({ visible: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   await page.getByRole('dialog').getByRole('button', { name: 'I got paid', exact: true }).click(); expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
 });
@@ -47,11 +48,11 @@ for (const type of ['I spent', 'I got paid', 'Move money'] as const) test(`${typ
   await expect(page.locator('.save-ripple')).toHaveCount(0);
 });
 
-test('phone scrolling stays smooth with the wave and a single ripple', async ({ page }) => {
-  test.setTimeout(60000); await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await expect(page.locator('.home-wave')).toBeVisible();
+test('phone scrolling stays smooth with decoded water photos and a single ripple', async ({ page }) => {
+  test.setTimeout(60000); await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await expect(page.locator('.water-photo')).toBeVisible();
   const session = await page.context().newCDPSession(page); await session.send('Emulation.setCPUThrottlingRate', { rate: 4 });
   const sample = async (effects: boolean) => page.evaluate(async effects => {
-    document.querySelector<SVGElement>('.home-wave')!.style.animationPlayState = effects ? 'running' : 'paused';
+    // Photography remains static; compare baseline scrolling with one save ripple.
     const intervals: number[] = []; const start = performance.now(); let previous = start, rippled = false;
     await new Promise<void>(resolve => { function frame(now: number) {
       const elapsed = now - start;

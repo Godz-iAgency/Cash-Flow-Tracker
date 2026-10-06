@@ -1,8 +1,9 @@
+import { navigateTest } from './helpers';
 import { test, expect } from '@playwright/test';
 import { initialState } from '../../shared/seed';
 import { localDate, validateTransaction } from '../../shared/model';
 import { contrastAudit } from './water-contrast';
-async function nav(page: any, name: string) { const target = page.getByRole('button', { name, exact: true }).filter({ visible: true }); if (['My spending', 'Money in & out', 'Daily checks', 'Monthly review', 'Notes & reminders'].includes(name) && !await target.count()) await page.getByText('Advanced', { exact: true }).click(); await target.click(); }
+async function nav(page: any, name: string) { await navigateTest(page, name); }
 
 test('the common entry path stays short, keyboard focus stays in the task, and optional entry still works', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/?preview=simple');
@@ -11,7 +12,7 @@ test('the common entry path stays short, keyboard focus stays in the task, and o
   expect(await page.locator('.sidebar').evaluate(el => (el as HTMLElement).inert)).toBe(true);
   await nav(page, 'More options'); await page.getByLabel('Quick entry', { exact: true }).fill('.05 other'); await page.getByLabel('Quick entry', { exact: true }).press('Enter'); await nav(page, 'Save');
   await expect(page.getByRole('dialog')).toBeHidden(); expect(await page.locator('.sidebar').evaluate(el => (el as HTMLElement).inert)).toBe(false);
-  await nav(page, 'More'); await page.getByText('Advanced',{exact:true}).click(); await page.getByText('Past changes & other tools',{exact:true}).click(); await nav(page, 'Change history');
+  await nav(page, 'More'); await page.getByText('More tools', {exact:true}).click(); await page.getByText('Past changes & other tools',{exact:true}).click(); await nav(page, 'Change history');
   const dialog = page.getByRole('dialog'); await dialog.locator('.audit-list > details > summary').first().click(); await expect(dialog).toContainText('$0.05'); await expect(dialog.locator('pre').first()).toBeHidden();
   const before = await page.evaluate(() => localStorage.getItem('cash-flow-water-preview'));
   await dialog.locator('.original-record > summary').first().click(); await expect(dialog.locator('pre').last()).toContainText('amountCents'); await page.keyboard.press('Escape');
@@ -30,13 +31,13 @@ test('income breakdown follows Personal and Business and extra reports start col
   const state = initialState();
   state.transactions = (['Personal', 'Business'] as const).map((scope, i) => validateTransaction({ id: `income-${i}`, type: 'Income', amountCents: i ? 70000 : 2500, merchant: i ? 'Business client' : 'Personal pay', description: '', category: i ? 'Business income' : 'Employment', subcategory: '', accountId: state.accounts.find(a => a.scope === scope)!.id, toAccountId: '', scope, classification: '', date: localDate(), time: '09:00', notes: '' }, state));
   await page.addInitScript(s => localStorage.setItem('cash-flow-tracker-v1', JSON.stringify(s)), state); await page.goto('/');
-  await nav(page, 'More'); await nav(page, 'Money in & out');
-  await expect(page.locator('.income-allocation')).toBeHidden(); await page.getByText('Where my income goes', { exact: true }).filter({ visible: true }).click(); await expect(page.locator('.income-allocation')).toContainText('$25.00'); await expect(page.locator('.income-allocation')).not.toContainText('$700.00');
-  await nav(page, 'Business'); await expect(page.locator('.income-allocation')).toContainText('$700.00'); await expect(page.locator('.income-allocation')).not.toContainText('$25.00');
+  await nav(page, 'Income');
+  await expect(page.locator('.everyday-view')).toContainText('$25.00'); await expect(page.locator('.everyday-view')).not.toContainText('$700.00');
+  await nav(page, 'Business'); await expect(page.locator('.everyday-view')).toContainText('$700.00'); await expect(page.locator('.everyday-view')).not.toContainText('$25.00');
   await nav(page, 'More'); await nav(page, 'Monthly review'); await expect(page.locator('.review-values')).toBeHidden(); await expect(page.locator('.simple-metrics > *')).toHaveCount(3);
 });
 
-for (const mode of ['dark', 'light']) test(`${mode}: optional screens use readable rows and disclosures on a small phone`, async ({ page }) => {
+for (const mode of ['water']) test(`${mode}: optional screens use readable rows and disclosures on a small phone`, async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 }); await page.addInitScript(mode => localStorage.setItem('cash-flow-appearance', mode), mode); await page.goto('/?preview=simple');
   for (const name of ['My spending', 'Money in & out', 'Daily checks', 'Monthly review', 'Notes & reminders']) {
     await nav(page, 'More'); await nav(page, name); await page.waitForTimeout(200);
@@ -50,17 +51,19 @@ test('a failed server response gives a useful connection message without technic
   await page.goto('/'); await expect(page.getByRole('alert')).toContainText('Check your connection and try again'); await expect(page.locator('body')).not.toContainText('FUNCTION_INVOCATION_FAILED'); await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
 });
 
-test('everyday tabs and choices stay plain, and reports open only when requested', async ({ page }) => {
+test('the five everyday tabs stay plain and the ledger and reports start collapsed', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/?preview=simple');
   const navBar = page.getByRole('navigation', { name: 'Mobile navigation' });
-  expect(await navBar.getByRole('button').allTextContents()).toEqual(['Home', 'History', 'Plan', 'My money', 'More']);
+  expect(await navBar.getByRole('button').allTextContents()).toEqual(['Home', 'Income', 'Expenses', 'Cash flow', 'Advanced']);
   await expect(page.getByRole('button', { name: 'I spent', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'I got paid', exact: true })).toBeVisible();
-  await nav(page, 'Plan'); await expect(page.locator('.simple-metrics')).toContainText('Plan to spend'); await expect(page.locator('.simple-metrics')).toContainText('Spent so far'); await expect(page.locator('.simple-metrics')).toContainText('Left to spend');
-  await expect(page.getByRole('button', { name: /Money I expect/ })).toBeHidden();
-  await page.getByText('Money coming in', { exact: true }).click(); await expect(page.getByRole('button', { name: /Money I expect/ })).toBeVisible();
-  await nav(page, 'More'); await expect(page.getByRole('button', { name: 'Backup & devices' })).toBeVisible(); await expect(page.getByRole('button', { name: 'My spending', exact: true })).toBeHidden();
-  await page.getByText('Advanced', { exact: true }).click(); await expect(page.getByRole('button', { name: 'My spending', exact: true })).toBeVisible();
+  await nav(page, 'Expenses'); await expect(page.locator('.expense-row')).toHaveCount(13);
+  await expect(page.locator('.budget-groups')).toHaveCount(0);
+  await nav(page, 'Advanced'); await expect(page.getByRole('button', { name: 'Backup & devices' })).toBeVisible();
+  await expect(page.locator('.advanced-ledger')).not.toHaveAttribute('open', '');
+  await expect(page.getByText('Income statement', { exact: true }).locator('..')).not.toHaveAttribute('open', '');
+  await expect(page.getByRole('button', { name: 'My spending', exact: true })).toBeHidden();
+  await page.getByText('More tools', { exact: true }).click(); await expect(page.getByRole('button', { name: 'My spending', exact: true })).toBeVisible();
 });
 
 test('a plan over its limit gives the amount over, with its original spending still editable', async ({ page }) => {

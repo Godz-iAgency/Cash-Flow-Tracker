@@ -1,10 +1,11 @@
+import { navigateTest } from './helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { initialState } from '../../shared/seed';
 import { openMore } from './helpers';
 async function swipe(page:Page,x:number,y:number,distance=250){const s=await page.context().newCDPSession(page); await s.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});for(let i=1;i<=12;i++)await s.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-distance*i/12}]});await s.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await s.detach();}
 for(const width of [320,390,497,768,1440])test(`page and entry scrolling stay independent at ${width}px`,async({page})=>{
- await page.setViewportSize({width,height:650}); await page.goto('/?preview=simple'); await page.getByRole('button',{name:'Plan',exact:true}).filter({visible:true}).click(); await page.evaluate(()=>{document.querySelectorAll<HTMLDetailsElement>('.budget-group,.budget-item').forEach(d=>d.open=true);window.scrollTo(0,0);});await page.mouse.move(width/2,500);await page.mouse.wheel(0,600);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(100);
+ await page.setViewportSize({width,height:650}); await page.goto('/?preview=simple'); await navigateTest(page, 'Plan'); await page.evaluate(()=>{document.querySelectorAll<HTMLDetailsElement>('.budget-group,.budget-item').forEach(d=>d.open=true);window.scrollTo(0,0);});await page.mouse.move(width/2,500);await page.mouse.wheel(0,600);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(100);
  await page.getByRole('button',{name:'Add entry',exact:true}).filter({visible:true}).click();const form=page.getByRole('dialog');await form.getByRole('button',{name:'More options'}).click();const content=form.locator('.modal-content');const before=await page.evaluate(()=>scrollY);await content.evaluate(el=>el.scrollTop=0);const bounds=await content.boundingBox();await page.mouse.move(bounds!.x+bounds!.width/2,bounds!.y+bounds!.height*.6);await page.mouse.wheel(0,500);await expect.poll(()=>content.evaluate(el=>el.scrollTop)).toBeGreaterThan(30);expect(await page.evaluate(()=>scrollY)).toBe(before);await page.keyboard.press('Escape');await expect(form).toBeHidden();
  await page.evaluate(()=>window.scrollTo(0,0));await swipe(page,width/2,500);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(30);
 });

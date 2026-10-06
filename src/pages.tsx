@@ -6,7 +6,7 @@ import { accountRoles, cashTotals, currentBalance, fundedExpenses, settingsFor }
 import { ReconciliationPanel } from './Reconciliation';
 import { WaterWave } from './WaterTheme';
 import { ActivityChart, Empty, MoneyCard, Progress, TransactionList, monthLabel } from './components';
-export type Page = 'Advanced' | 'Dashboard' | 'Transactions' | 'Budget' | 'Accounts' | 'Insights' | 'Notes & Reminders' | 'Money Flow' | 'Check-In History' | 'Month-End Review';
+export type Page = 'Income' | 'Advanced' | 'Dashboard' | 'Transactions' | 'Budget' | 'Accounts' | 'Insights' | 'Notes & Reminders' | 'Money Flow' | 'Check-In History' | 'Month-End Review';
 type ViewProps = { state: State; month: string; scope: Scope | 'All' };
 export function BalanceHero({ state, onAccounts }: { state: State; onAccounts: () => void }) {
   const balances = cashTotals(state);

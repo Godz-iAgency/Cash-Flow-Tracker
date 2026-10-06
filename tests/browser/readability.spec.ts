@@ -35,7 +35,7 @@ async function audit(page: Page, label: string, scale: number): Promise<TextAudi
 }
 for(const {width,scale} of [{width:320,scale:1},{width:390,scale:1},{width:768,scale:1},{width:1440,scale:1},{width:370,scale:1.25},{width:320,scale:2}]) test(`all core views and entry forms respect text size ${width}px ${scale}`,async({page})=>{
  test.setTimeout(90000); await page.setViewportSize({width,height:844}); await page.goto('/?preview=simple'); await page.evaluate(scale=>document.documentElement.style.fontSize=`${scale*100}%`,scale);
- for(const name of ['Home','History','Plan','My money','More']) { await page.getByRole('button',{name,exact:true}).filter({visible:true}).click(); const result=await audit(page,name,scale); expect(result.undersized).toEqual([]); }
+ for(const name of ['Home','Income','Expenses','Cash flow','Advanced']) { await page.getByRole('button',{name,exact:true}).filter({visible:true}).click(); const result=await audit(page,name,scale); expect(result.undersized).toEqual([]); }
  await page.getByRole('button',{name:'Add entry',exact:true}).filter({visible:true}).click(); for(const type of ['I spent','I got paid','Move money']) { await page.getByRole('dialog').getByRole('button',{name:type,exact:true}).click(); expect((await audit(page,type,scale)).undersized).toEqual([]); } await page.getByRole('button',{name:'More options'}).click(); expect((await audit(page,'Entry details',scale)).undersized).toEqual([]);
 });
 for (const scale of [1, 2]) test(`sign-in and connection errors remain readable at 320px, ${scale * 100}% font size`, async ({ page }) => {

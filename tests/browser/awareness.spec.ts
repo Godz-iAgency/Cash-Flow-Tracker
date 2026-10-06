@@ -1,3 +1,4 @@
+import { navigateTest } from './helpers';
 import { openMore, openDetailedEntry } from './helpers';
 import { test, expect, type Page } from '@playwright/test';
 import { initialState } from '../../shared/seed';
@@ -51,18 +52,18 @@ test('financial action saves, completes, stays in history, and leaves cash flow 
   expect(stored.audit[1].before.status).toBe('Open'); expect(stored.audit[1].after.status).toBe('Completed');
   expect(stored.transactions).toHaveLength(0);
   await page.getByRole('button', { name: 'Home', exact: true }).click();
-  await expect(page.locator('.month-strip')).toContainText('$0.00 of');
-  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await expect(page.locator('.month-strip')).toContainText('$0.00 spent');
+  await navigateTest(page, 'History');
   await expect(page.locator('.simple-metric').nth(1)).toContainText('$0.00');
   await page.getByRole('button', { name: 'Business', exact: true }).click(); await notes(page);
   await page.getByLabel('Filter action status').selectOption('Completed'); await expect(card).toBeHidden();
 });
 test('check-in persists, becomes unconfirmed after a new entry, and opens today’s ledger', async ({ page }) => {
   await open(page);
-  await page.getByRole('button', { name: 'More', exact: true }).click(); await page.getByText('Advanced',{exact:true}).click(); await page.getByText('Past changes & other tools',{exact:true}).click(); await page.getByText('Review today’s entries',{exact:true}).click();
+  await page.getByRole('button', {name:'Advanced',exact:true}).click(); await page.getByText('More tools', {exact:true}).click(); await page.getByText('Past changes & other tools',{exact:true}).click(); await page.getByText('Review today’s entries',{exact:true}).click();
   const checkIn = page.locator('.check-in-card'); await checkIn.getByRole('button', { name: 'Confirm entries', exact: true }).click();
   await expect(checkIn.getByRole('button', { name: 'Complete', exact: true })).toBeDisabled();
-  await page.reload(); await page.getByRole('button', { name: 'More', exact: true }).click(); await page.getByText('Advanced',{exact:true}).click(); await page.getByText('Past changes & other tools',{exact:true}).click(); await page.getByText('Review today’s entries',{exact:true}).click(); await expect(checkIn.getByRole('button', { name: 'Complete', exact: true })).toBeDisabled();
+  await page.reload(); await page.getByRole('button', {name:'Advanced',exact:true}).click(); await page.getByText('More tools', {exact:true}).click(); await page.getByText('Past changes & other tools',{exact:true}).click(); await page.getByText('Review today’s entries',{exact:true}).click(); await expect(checkIn.getByRole('button', { name: 'Complete', exact: true })).toBeDisabled();
   await openDetailedEntry(page);
   const form = page.getByRole('dialog'); await form.getByRole('textbox', { name: 'Amount', exact: true }).fill('0.10'); await form.locator('#merchant').fill('New recorded purchase'); await form.locator('#account').selectOption('capital-one-checking');
   await form.getByRole('button', { name: 'Save transaction' }).click(); await expect(form).toBeHidden();

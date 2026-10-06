@@ -1,70 +1,42 @@
-/* The entire water palette lives here. Edit these tokens to retune either mode. */
+/* One clear-water appearance. All interface paint is defined here. */
 :root {
-  color-scheme: dark;
-  --canvas: #04121A;
-  --surface: #0A2230;
-  --raised: #0F2F40;
-  --button: #4FD1C5;
-  --link: #9BE7F0;
-  --text: #E6F6F8;
-  --muted: #8FB3BD;
-  --success: #5EEAD4;
-  --coral: #FF8A75;
-  --danger: var(--coral);
-  --button-text: var(--canvas);
-  --border: color-mix(in srgb, var(--link) 14%, transparent);
-  --focus: var(--link);
+  color-scheme: light;
+  --canvas: #F3F7F6;
+  --surface: #FFFFFF;
+  --raised: #E9F1EF;
+  --button: #145C57;
+  --link: #145C57;
+  --text: #142E2D;
+  --muted: #48625F;
+  --success: #14654F;
+  --danger: #93451E;
+  --coral: var(--danger);
+  --button-text: #FFFFFF;
+  --border: #D4E1DE;
+  --focus: #145C57;
   --chrome: var(--canvas);
-  --surface-glint: color-mix(in srgb, var(--surface) 96%, var(--text));
-  --hero-glow: color-mix(in srgb, var(--surface) 85%, var(--button));
-  --success-wash: color-mix(in srgb, var(--surface) 92%, var(--success));
-  --danger-wash: color-mix(in srgb, var(--surface) 92%, var(--coral));
-  --hover: color-mix(in srgb, var(--raised) 92%, var(--link));
-  --button-hover: color-mix(in srgb, var(--button) 90%, var(--text));
-  --wave: color-mix(in srgb, var(--button) 12%, transparent);
-  --wave-line: color-mix(in srgb, var(--link) 22%, transparent);
-  --shade: color-mix(in srgb, var(--canvas) 72%, transparent);
-  --shadow: color-mix(in srgb, var(--canvas) 40%, transparent);
-  --glow: color-mix(in srgb, var(--button) 6%, transparent);
-  --series-1: var(--button);
-  --series-2: var(--link);
-  --series-3: var(--success);
-  --series-4: var(--coral);
-  --series-5: color-mix(in srgb, var(--link) 72%, var(--canvas));
-  --series-6: color-mix(in srgb, var(--success) 70%, var(--canvas));
-  /* Compatibility aliases keep finance components independent of the palette. */
+  --surface-glint: var(--surface);
+  --hero-glow: #E5F1EE;
+  --success-wash: #E2F0E9;
+  --danger-wash: #F7ECE4;
+  --hover: #E3EEEB;
+  --button-hover: #104943;
+  --wave: #C6E4DE;
+  --wave-line: #D4E1DE;
+  --shade: rgb(16 38 37 / 38%);
+  --shadow: rgb(16 38 37 / 8%);
+  --glow: transparent;
+  --series-1: #145C57;
+  --series-2: #48625F;
+  --series-3: #14654F;
+  --series-4: #93451E;
+  --series-5: #527671;
+  --series-6: #315E52;
   --green: var(--button);
   --accent: var(--success);
   --gold: var(--link);
   --warning: var(--link);
+  /* A 96% pale backplate guarantees readable text even over black pixels. */
+  --water-backplate: rgb(249 253 251 / 96%);
 }
-:root[data-theme='light'] {
-  color-scheme: light;
-  --canvas: #EAF7FA;
-  --surface: #FFFFFF;
-  --raised: #DCEEF4;
-  --button: #0E9AA7;
-  --link: #076E7B;
-  --text: #0B2A36;
-  --muted: #3E626E;
-  --success: #08786B;
-  /* Coral stays the warning paint; darker terracotta keeps warning text readable. */
-  --danger: #A53E2D;
-  --button-text: #04121A;
-  --focus: var(--link);
-  --border: color-mix(in srgb, var(--link) 15%, transparent);
-  --surface-glint: var(--surface);
-  --hero-glow: color-mix(in srgb, var(--surface) 82%, var(--raised));
-  --success-wash: color-mix(in srgb, var(--surface) 93%, var(--success));
-  --danger-wash: color-mix(in srgb, var(--surface) 85%, var(--coral));
-  --hover: color-mix(in srgb, var(--raised) 95%, var(--link));
-  --button-hover: color-mix(in srgb, var(--button) 94%, var(--text));
-  --wave: color-mix(in srgb, var(--button) 10%, transparent);
-  --wave-line: color-mix(in srgb, var(--link) 16%, transparent);
-  --shade: color-mix(in srgb, var(--text) 25%, transparent);
-  --shadow: color-mix(in srgb, var(--text) 9%, transparent);
-  --glow: color-mix(in srgb, var(--button) 7%, transparent);
-}
-@media print {
-  :root { --canvas: #FFFFFF; --surface: #FFFFFF; --raised: #DCEEF4; --text: #0B2A36; --muted: #3E626E; --link: #076E7B; --success: #08786B; --danger: #A53E2D; --surface-glint: var(--surface); --hero-glow: var(--surface); }
-}
+@media print { :root { --canvas: #FFFFFF; --surface: #FFFFFF; --raised: #E9F1EF; } }
